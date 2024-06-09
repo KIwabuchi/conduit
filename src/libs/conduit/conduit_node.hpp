@@ -23,6 +23,9 @@
 #include <initializer_list>
 
 
+#include <metall/metall.hpp>
+#include <metall/container/vector.hpp>
+
 //-----------------------------------------------------------------------------
 // -- conduit includes --
 //-----------------------------------------------------------------------------
@@ -67,6 +70,11 @@ class NodeConstIterator;
 //-----------------------------------------------------------------------------
 class CONDUIT_API Node
 {
+private:
+  using allocator_type = metall::manager::fallback_allocator<void>;
+  using void_pointer = typename allocator_type::pointer;
+  template <typename T>
+  using pointer = std::pointer_traits<void_pointer >::template rebind<T>;
 
 //=============================================================================
 //-----------------------------------------------------------------------------
@@ -110,7 +118,7 @@ public:
 //-----------------------------------------------------------------------------
 // -- basic constructor and destruction --
 //-----------------------------------------------------------------------------
-    Node();
+    Node(const allocator_type& alloc = allocator_type());
     Node(const Node &node);
     ~Node();
 
@@ -120,25 +128,29 @@ public:
 //-----------------------------------------------------------------------------
 // -- constructors for generic types --
 //-----------------------------------------------------------------------------
-    explicit Node(const DataType &dtype);
-    explicit Node(const Schema &schema);
+    explicit Node(const DataType &dtype, const allocator_type& alloc = allocator_type());
+    explicit Node(const Schema &schema, const allocator_type& alloc = allocator_type());
 
     /// in these methods the `external` param controls if we use copy or
     /// external semantics.
     Node(const Generator &gen,
-         bool external);
+         bool external,
+         const allocator_type& alloc = allocator_type());
 
     Node(const std::string &json_schema,
          void *data,
-         bool external);
+         bool external,
+         const allocator_type& alloc = allocator_type());
 
     Node(const Schema &schema,
          void *data,
-         bool external);
+         bool external,
+         const allocator_type& alloc = allocator_type());
 
     Node(const DataType &dtype,
          void *data,
-         bool external);
+         bool external,
+         const allocator_type& alloc = allocator_type());
 
 //-----------------------------------------------------------------------------
 ///@}
@@ -3107,7 +3119,7 @@ public:
     /// update_external() sets this node to describe the data from the children
     //   in n_src.
     void        update_external(Node &n_src);
-    
+
 //-----------------------------------------------------------------------------
 // -- move and swap ---
 //-----------------------------------------------------------------------------
@@ -3115,10 +3127,10 @@ public:
     /// Node, passed node is empty afterward
     void        move(Node &n);
 
-    /// swap() swap the ownership ownership of data and tree structure 
+    /// swap() swap the ownership ownership of data and tree structure
     /// between two nodes.
     void        swap(Node &n);
-    
+
 //-----------------------------------------------------------------------------
 // -- endian related --
 //-----------------------------------------------------------------------------
@@ -3621,8 +3633,8 @@ public:
     ///
     /// `opts` Node is used to pass formatting params.
     ///
-    /// Supported `opts` entries: 
-    ///  
+    /// Supported `opts` entries:
+    ///
     ///  num_children_threshold: max number of children to print for a list or object
     ///    (default: 7)
     ///  num_elements_threshold: max number of elements to print for a leaf
@@ -3775,7 +3787,7 @@ public:
                         { return m_schema->dtype();}
 
     Schema          *schema_ptr()
-                        {return m_schema;}
+                        {return metall::to_raw_pointer(m_schema);}
 
     // check if data owned by this node is externally
     // allocated.
@@ -3784,14 +3796,14 @@ public:
 
     // check if this node is the root of a tree nodes.
     bool             is_root() const
-                        {return m_parent == NULL;}
+                        {return !m_parent;}
 
     // parent access
     Node            *parent()
-                        {return m_parent;}
+                        {return metall::to_raw_pointer(m_parent);}
 
     const Node      *parent() const
-                        {return m_parent;}
+                        {return metall::to_raw_pointer(m_parent);}
 
     //memory space info
 
@@ -3880,7 +3892,7 @@ public:
 
     ///
     /// describe() creates a node that replaces each leaf with
-    ///  descriptive statistics (count, mean, min, max) and a string repd 
+    ///  descriptive statistics (count, mean, min, max) and a string repd
     ///  values summary
     void             describe(Node &nres) const;
     void             describe(const Node &opts, Node &nres) const;
@@ -3980,7 +3992,7 @@ public:
     /// checks if given path exists in the Node hierarchy
     bool        has_path(const std::string &path) const;
     /// returns the direct child names for this node
-    const std::vector<std::string> &child_names() const;
+    const Schema::object_vector_type &child_names() const;
 
     /// adds an empty unnamed node to a list (list interface)
     /// TODO `append` is a strange name here, we want this interface
@@ -4165,9 +4177,9 @@ public:
                         {return m_mmaped ? m_data_size : 0;}
 
     void  *element_ptr(index_t idx)
-        {return static_cast<char*>(m_data) + dtype().element_index(idx);};
+        {return static_cast<char*>(metall::to_raw_pointer(m_data)) + dtype().element_index(idx);};
     const void  *element_ptr(index_t idx) const
-        {return static_cast<char*>(m_data) + dtype().element_index(idx);};
+        {return static_cast<char*>(metall::to_raw_pointer(m_data)) + dtype().element_index(idx);};
 
 //-----------------------------------------------------------------------------
 /// description:
@@ -4458,6 +4470,11 @@ private:
 //-----------------------------------------------------------------------------
 //=============================================================================
 
+    template <typename T, typename ...Args>
+    T* allocate(Args&&... args);
+    template <typename T>
+    void deallocate(pointer<T> node);
+
 //-----------------------------------------------------------------------------
 // value access related to conditional long long and long double support
 //-----------------------------------------------------------------------------
@@ -4514,11 +4531,13 @@ private:
     static void      walk_schema(Node   *node,
                                  Schema *schema,
                                  void   *data,
-                                 index_t allocator_id);
+                                 index_t allocator_id,
+                                 allocator_type& allocator);
 
     static void      mirror_node(Node *node,
                                  Schema *schema,
-                                 const Node *src);
+                                 const Node *src,
+                                 allocator_type& allocator);
 
 //-----------------------------------------------------------------------------
 //
@@ -4740,18 +4759,18 @@ private:
 //
 //-----------------------------------------------------------------------------
     /// pointer to this node's parent (if it exists)
-    Node                *m_parent;
+    pointer<Node> m_parent;
     /// pointer to this node's schema
-    Schema              *m_schema;
+    pointer<Schema> m_schema;
     /// we need to know if *this* node created the schema
     bool                 m_owns_schema;
 
     /// collection of children
-    std::vector<Node*>   m_children;
+    metall::container::vector<pointer<Node>, allocator_type::rebind<pointer<Node>>::other>   m_children;
 
     // TODO: DataContainer?
     // pointer to the node's data
-    void     *m_data;
+    pointer<void> m_data;
     // size of the allocated or mmaped data point
     index_t   m_data_size;
 
@@ -4768,10 +4787,12 @@ private:
     // Note: m_mmaped is used for bookkeeping during cases were we are
     // initializing nodes using memory maps, so it is still needed apart from
     // simply knowing if this pointer is valid.
-    MMap     *m_mmap;
+    pointer<MMap> m_mmap;
 
     // allocator id for memory
     index_t m_allocator_id;
+
+    mutable allocator_type m_allocator;
 };
 //-----------------------------------------------------------------------------
 // -- end conduit::Node --
