@@ -19,6 +19,11 @@
 #include <string>
 #include <sstream>
 
+#include <metall/metall.hpp>
+#include <metall/container/vector.hpp>
+#include <metall/container/string.hpp>
+#include <metall/container/string_key_store.hpp>
+#include <metall/container/scoped_allocator.hpp>
 //-----------------------------------------------------------------------------
 // -- conduit includes -- 
 //-----------------------------------------------------------------------------
@@ -45,8 +50,27 @@ namespace conduit
 //-----------------------------------------------------------------------------
 class CONDUIT_API Schema
 {
+private:
+  using allocator_type = metall::manager::fallback_allocator<void>;
+  using void_pointer = typename allocator_type::pointer;
+  template <typename T>
+  using pointer = std::pointer_traits<void_pointer>::template rebind<T>;
+  template <typename T>
+  using other_alloc = typename std::allocator_traits<allocator_type>::template rebind_alloc<T>;
+
+
 public:
-//-----------------------------------------------------------------------------
+  using string_type =
+      metall::container::basic_string<char, std::char_traits<char>,
+                                      other_alloc<char>>;
+  using schema_vector_type =
+      metall::container::vector<pointer<Schema>, other_alloc<pointer<Schema>>>;
+  using object_vector_type = metall::container::vector<
+      string_type,
+      metall::container::scoped_allocator_adaptor<other_alloc<string_type>>>;
+  using object_map_type = metall::container::string_key_store<index_t, allocator_type>;
+
+  //-----------------------------------------------------------------------------
 // -- friends of Schema --
 //-----------------------------------------------------------------------------
     friend class Node;
@@ -66,17 +90,17 @@ public:
 ///
 //-----------------------------------------------------------------------------
     /// create an empty schema
-    Schema(); 
+    Schema(const allocator_type& allocator = allocator_type());
     /// schema copy constructor
     explicit Schema(const Schema &schema);
     /// create a schema for a leaf type given a data type id
-    explicit Schema(index_t dtype_id);
+    explicit Schema(index_t dtype_id, const allocator_type& allocator = allocator_type());
     /// create a schema from a DataType
-    explicit Schema(const DataType &dtype);
+    explicit Schema(const DataType &dtype, const allocator_type& allocator = allocator_type());
     /// create a schema from a json description (std::string case)
-    explicit Schema(const std::string &json_schema);
+    explicit Schema(const std::string &json_schema, const allocator_type& allocator = allocator_type());
     /// create a schema from a json description (c string case)
-    explicit Schema(const char *json_schema);
+    explicit Schema(const char *json_schema, const allocator_type& allocator = allocator_type());
 
     /// Schema Destructor
     ~Schema();
@@ -121,7 +145,7 @@ public:
                         {return m_dtype.element_index(idx);}
 
     bool            is_root() const
-                        { return m_parent == NULL;}
+                        { return !m_parent;}
 
     /// returns if this schema represents are compact layout
     bool            is_compact() const;
@@ -140,10 +164,10 @@ public:
 
     /// parent access
     const Schema   *parent() const
-                       { return m_parent;}
+                       { return metall::to_raw_pointer(m_parent);}
 
     Schema         *parent()
-                        { return m_parent;}
+                        { return metall::to_raw_pointer(m_parent);}
 
     void            print() const
                         {std::cout << to_json(false,2) << std::endl;}
@@ -349,7 +373,7 @@ public:
     
     bool              has_child(const std::string &name) const;
     bool              has_path(const std::string &path) const;
-    const std::vector<std::string> &child_names() const;
+    const object_vector_type &child_names() const;
     void              remove(const std::string &path);
     /// remove_child removes a direct child only (allows pathlike names)
     void              remove_child(const std::string &name); 
@@ -367,6 +391,12 @@ private:
 // -- private methods that help with init, memory allocation, and cleanup --
 //
 //-----------------------------------------------------------------------------
+    template <typename T, typename ...Args>
+    T* allocate(Args&&... args);
+    template <typename T>
+    void deallocate(pointer<T> node);
+
+
     // set defaults (used by constructors)
     void        init_defaults();
     // setup schema to represent a list
@@ -404,14 +434,17 @@ private:
 
     struct Schema_Object_Hierarchy 
     {
-        std::vector<Schema*>            children;
-        std::vector<std::string>        object_order;
-        std::map<std::string, index_t>  object_map;
+      Schema_Object_Hierarchy(const allocator_type &alloc = allocator_type())
+          : children(alloc), object_order(alloc), object_map(alloc) {}
+
+      schema_vector_type children;
+      object_vector_type object_order;
+      object_map_type object_map;
     };
 
     // this is used to return a ref to an empty list of strings as 
     // child names when the schema is not in the object role.
-    static std::vector<std::string>     m_empty_child_names;
+    //static std::vector<std::string>     m_empty_child_names;
 
 //-----------------------------------------------------------------------------
 //
@@ -423,7 +456,10 @@ private:
 //-----------------------------------------------------------------------------
     struct Schema_List_Hierarchy 
     {
-        std::vector<Schema*> children;
+      Schema_List_Hierarchy(const allocator_type& alloc = allocator_type())
+          : children(alloc) {}
+
+      schema_vector_type children;
     };
 
 //-----------------------------------------------------------------------------
@@ -432,13 +468,13 @@ private:
 //
 //-----------------------------------------------------------------------------
     // for obj and list interfaces
-    std::vector<Schema*>                   &children();
-    std::map<std::string, index_t>         &object_map();
-    std::vector<std::string>               &object_order();
+    schema_vector_type                 &children();
+    Schema::object_map_type         &object_map();
+    object_vector_type              &object_order();
 
-    const std::vector<Schema*>             &children()  const;    
-    const std::map<std::string, index_t>   &object_map()   const;
-    const std::vector<std::string>         &object_order() const;
+    const schema_vector_type           &children()  const;
+    const Schema::object_map_type   &object_map()   const;
+    const object_vector_type        &object_order() const;
 
     void                                   object_map_print()   const;
     void                                   object_order_print() const;
@@ -469,12 +505,12 @@ private:
     /// - NULL for leaf type
     /// - A Schema_Object_Hierarchy instance for schemas describing an object
     /// - A Schema_List_Hierarchy instance for schemas describing a list
-    void       *m_hierarchy_data;
+    pointer<void>       m_hierarchy_data;
     /// if this schema instance has a parent, this holds the pointer to that
     /// parent
-    Schema     *m_parent;
+    pointer<Schema>     m_parent;
 
-
+    allocator_type m_allocator;
 };
 //-----------------------------------------------------------------------------
 // -- end conduit::Schema --

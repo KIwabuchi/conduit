@@ -23,27 +23,45 @@ TEST(conduit_node, simple)
     uint32   b_val  = 20;
     float64  c_val  = 30.0;
 
-    Node n;
-    n["a"] = a_val;
-    n["b"] = b_val;
-    n["c"] = c_val;
+    {
+      metall::manager manager(metall::create_only, "/tmp/metall");
+      Node &n = *manager.construct<Node>(metall::unique_instance)(
+          manager.get_allocator());
+      n["a"] = a_val;
+      n["b"] = b_val;
+      n["c"] = c_val;
 
-    EXPECT_EQ(n["a"].as_uint32(),a_val);
-    EXPECT_EQ(n["b"].as_uint32(),b_val);
-    EXPECT_EQ(n["c"].as_float64(),c_val);
-    // data should be owned by the conduit Node
-    EXPECT_FALSE(n["a"].is_data_external());
+      EXPECT_EQ(n["a"].as_uint32(), a_val);
+      EXPECT_EQ(n["b"].as_uint32(), b_val);
+      EXPECT_EQ(n["c"].as_float64(), c_val);
+    }
 
+    {
+      metall::manager manager(metall::open_read_only, "/tmp/metall");
+      const Node &n = *manager.find<Node>(metall::unique_instance).first;
+
+      EXPECT_EQ(n["a"].as_uint32(), a_val);
+      EXPECT_EQ(n["b"].as_uint32(), b_val);
+      EXPECT_EQ(n["c"].as_float64(), c_val);
+      // data should be owned by the conduit Node
+      EXPECT_FALSE(n["a"].is_data_external());
+    }
 }
 
-TEST(conduit_node, nested)
-{
+TEST(conduit_node, nested) {
+    uint32 val = 10;
+    {
+      metall::manager manager(metall::create_only, "/tmp/metall");
+      Node &n = *manager.construct<Node>(metall::unique_instance)(
+          manager.get_allocator());
+      n["a"]["b"] = val;
+    }
 
-    uint32   val  = 10;
-
-    Node n;
-    n["a"]["b"] = val;
-    EXPECT_EQ(n["a"]["b"].as_uint32(),val);
+    {
+      metall::manager manager(metall::open_read_only, "/tmp/metall");
+      Node &n = *manager.find<Node>(metall::unique_instance).first;
+      EXPECT_EQ(n["a"]["b"].as_uint32(), val);
+    }
 }
 
 TEST(conduit_node, pathlike_child_name)
@@ -51,22 +69,34 @@ TEST(conduit_node, pathlike_child_name)
 
     uint32   path_val  = 10;
     uint32   direct_val  = 20;
+    {
+      metall::manager manager(metall::create_only, "/tmp/metall");
+      Node &n = *manager.construct<Node>(metall::unique_instance)(
+          manager.get_allocator());
+      n["a/b"] = path_val;
+      n.add_child("a/b") = direct_val;
+    }
 
-    Node n;
-    n["a/b"] = path_val;
-    n.add_child("a/b") = direct_val;
+    uint32 deletion_test_val = 35;
+    {
+      metall::manager manager(metall::open_only, "/tmp/metall");
+      Node &n = *manager.find<Node>(metall::unique_instance).first;
 
-    EXPECT_EQ(n["a/b"].as_uint32(),path_val);
-    EXPECT_EQ(n.child("a/b").as_uint32(),direct_val);
+      EXPECT_EQ(n["a/b"].as_uint32(), path_val);
+      EXPECT_EQ(n.child("a/b").as_uint32(), direct_val);
 
-    uint32   deletion_test_val = 35;
-    n["c/d"] = deletion_test_val;
-    n.add_child("c/d") = direct_val;
-    n.remove("a/b");
-    n.remove_child("c/d");
+      n["c/d"] = deletion_test_val;
+      n.add_child("c/d") = direct_val;
+      n.remove("a/b");
+      n.remove_child("c/d");
+    }
 
-    EXPECT_EQ(n.child("a/b").as_uint32(),direct_val);
-    EXPECT_EQ(n["c/d"].as_uint32(),deletion_test_val);
+    {
+      metall::manager manager(metall::open_read_only, "/tmp/metall");
+      Node &n = *manager.find<Node>(metall::unique_instance).first;
+      EXPECT_EQ(n.child("a/b").as_uint32(), direct_val);
+      EXPECT_EQ(n["c/d"].as_uint32(), deletion_test_val);
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -77,9 +107,19 @@ TEST(conduit_node, vector)
     for(int i=0;i<100;i++)
         vec.push_back(i);
 
-    Node n;
-    n["a"]= vec;
-    EXPECT_EQ(n["a"].as_uint32_ptr()[99],99);
+    {
+      metall::manager manager(metall::create_only, "/tmp/metall");
+      Node &n = *manager.construct<Node>(metall::unique_instance)(
+          manager.get_allocator());
+      n["a"]= vec;
+    }
+
+    {
+      metall::manager manager(metall::open_read_only, "/tmp/metall");
+      Node &n = *manager.find<Node>(metall::unique_instance).first;
+      EXPECT_EQ(n["a"].as_uint32_ptr()[99], 99);
+      std::cout << "!!!! Value !!!" << n["a"].as_uint32_ptr()[99] << std::endl;
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -90,25 +130,35 @@ TEST(conduit_node, list)
     for(int i=0;i<100;i++)
         vec.push_back(i);
 
-    Node n;
-    Node& list = n["mylist"];
     uint32   a_val  = 10;
     uint32   b_val  = 20;
     float64  c_val  = 30.0;
-    list.append().set(a_val);
-    list.append().set(b_val);
-    list.append().set(c_val);
-    list.append().set(vec);
-    EXPECT_EQ(list[0].as_uint32(),a_val);
-    EXPECT_EQ(list[1].as_uint32(),b_val);
-    EXPECT_EQ(list[2].as_float64(),c_val);
-    EXPECT_EQ(list[3].as_uint32_ptr()[99],99);
 
-    EXPECT_EQ(n["mylist"][0].as_uint32(),a_val);
-    EXPECT_EQ(n["mylist"][1].as_uint32(),b_val);
-    EXPECT_EQ(n["mylist"][2].as_float64(),c_val);
-    EXPECT_EQ(n["mylist"][3].as_uint32_ptr()[99],99);
+    {
+      metall::manager manager(metall::create_only, "/tmp/metall");
+      Node &n = *manager.construct<Node>(metall::unique_instance)(
+          manager.get_allocator());
+      Node &list = n["mylist"];
+      list.append().set(a_val);
+      list.append().set(b_val);
+      list.append().set(c_val);
+      list.append().set(vec);
+    }
 
+    {
+      metall::manager manager(metall::open_read_only, "/tmp/metall");
+      Node &n = *manager.find<Node>(metall::unique_instance).first;
+      Node &list = n["mylist"];
+      EXPECT_EQ(list[0].as_uint32(), a_val);
+      EXPECT_EQ(list[1].as_uint32(), b_val);
+      EXPECT_EQ(list[2].as_float64(), c_val);
+      EXPECT_EQ(list[3].as_uint32_ptr()[99], 99);
+
+      EXPECT_EQ(n["mylist"][0].as_uint32(), a_val);
+      EXPECT_EQ(n["mylist"][1].as_uint32(), b_val);
+      EXPECT_EQ(n["mylist"][2].as_float64(), c_val);
+      EXPECT_EQ(n["mylist"][3].as_uint32_ptr()[99], 99);
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -190,20 +240,28 @@ TEST(conduit_node, simple_schema)
     uint32   b_val  = 20;
     float64  c_val  = 30.0;
 
-    Node n;
-    n["a"] = a_val;
-    n["b"] = b_val;
-    n["c"] = c_val;
-    n["here"]["there"] = c_val;
+    {
+      metall::manager manager(metall::create_only, "/tmp/metall");
+      Node &n = *manager.construct<Node>(metall::unique_instance)(
+          manager.get_allocator());
+      n["a"] = a_val;
+      n["b"] = b_val;
+      n["c"] = c_val;
+      n["here"]["there"] = c_val;
+    }
 
-    std::string res = n.schema().to_json();
-    std::cout << res;
-    conduit_rapidjson::Document d;
-    d.Parse<0>(res.c_str());
+    {
+      metall::manager manager(metall::open_read_only, "/tmp/metall");
+      Node &n = *manager.find<Node>(metall::unique_instance).first;
+      std::string res = n.schema().to_json();
+      std::cout << res;
+      conduit_rapidjson::Document d;
+      d.Parse<0>(res.c_str());
 
-    EXPECT_TRUE(d.HasMember("a"));
-    EXPECT_TRUE(d.HasMember("b"));
-    EXPECT_TRUE(d.HasMember("c"));
+      EXPECT_TRUE(d.HasMember("a"));
+      EXPECT_TRUE(d.HasMember("b"));
+      EXPECT_TRUE(d.HasMember("c"));
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -213,17 +271,24 @@ TEST(conduit_node, simple_schema_parent)
     uint32   b_val  = 20;
     float64  c_val  = 30.0;
 
-    Node n;
-    n["a"] = a_val;
-    n["b"] = b_val;
-    n["c"] = c_val;
-    n["here"]["there"] = c_val;
+    {
+      metall::manager manager(metall::create_only, "/tmp/metall");
+      Node &n = *manager.construct<Node>(metall::unique_instance)(
+          manager.get_allocator());
+      n["a"] = a_val;
+      n["b"] = b_val;
+      n["c"] = c_val;
+      n["here"]["there"] = c_val;
+    }
 
-    EXPECT_TRUE(n.schema().is_root());
-    Node & na = n["a"];
-    const Schema &na_schema =na.schema();
-    EXPECT_FALSE(na_schema.is_root());
-
+    {
+      metall::manager manager(metall::open_read_only, "/tmp/metall");
+      Node &n = *manager.find<Node>(metall::unique_instance).first;
+      EXPECT_TRUE(n.schema().is_root());
+      Node &na = n["a"];
+      const Schema &na_schema = na.schema();
+      EXPECT_FALSE(na_schema.is_root());
+    }
 }
 
 
@@ -1014,7 +1079,7 @@ TEST(conduit_node, rename_child)
     // error, can't rename non existing child
     EXPECT_THROW(n.rename_child("bad","d"),conduit::Error);
 
-    std::vector<std::string> cnames = n.child_names();
+    auto cnames = n.child_names();
     EXPECT_EQ(cnames[2],"c");
     EXPECT_TRUE(n.has_child("c"));
     EXPECT_FALSE(n.has_child("d"));

@@ -2876,8 +2876,8 @@ adjset::canonicalize(Node &adjset)
 {
     const index_t domain_id = find_domain_id(adjset);
 
-    const std::vector<std::string> &adjset_group_names = adjset["groups"].child_names();
-    for(const std::string &old_group_name : adjset_group_names)
+    const auto &adjset_group_names = adjset["groups"].child_names();
+    for(const auto &old_group_name : adjset_group_names)
     {
         const Node &group_node = adjset["groups"][old_group_name];
         const Node &neighbors_node = group_node["neighbors"];
