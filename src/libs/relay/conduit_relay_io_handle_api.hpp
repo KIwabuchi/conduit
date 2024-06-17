@@ -65,10 +65,10 @@ public:
                const Node &options);
 
     /// list child names at root of handle
-    void list_child_names(std::vector<std::string> &res);
+    void list_child_names(Node::StringVector &res);
     /// list child names at subpath
     void list_child_names(const std::string &path,
-                          std::vector<std::string> &res);
+                          Node::StringVector &res);
 
     // TODO: options variants for read and write above? with update of
     // above options with passed?
@@ -119,9 +119,9 @@ public:
         virtual void write(const Node &node,
                    const std::string &path,
                    const Node &options) = 0;
-        virtual void list_child_names(std::vector<std::string> &res) = 0;
+        virtual void list_child_names(Node::StringVector &res) = 0;
         virtual void list_child_names(const std::string &path,
-                              std::vector<std::string> &res) = 0;
+                              Node::StringVector &res) = 0;
         virtual void remove(const std::string &path) = 0;
         virtual bool has_path(const std::string &path) = 0;
         virtual void close() = 0;

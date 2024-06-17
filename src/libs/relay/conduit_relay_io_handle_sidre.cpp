@@ -186,7 +186,7 @@ SidreIOHandle::read(Node &node,
     CONDUIT_UNUSED(opts);
     // note: wrong mode errors are handled before dispatch to interface
 
-    std::vector<std::string> child_names;
+    Node::StringVector child_names;
     list_child_names(child_names);
 
     for(size_t i=0;i<child_names.size();i++)
@@ -324,7 +324,7 @@ SidreIOHandle::write(const Node & /*node*/, // node is unused
 
 //-----------------------------------------------------------------------------
 void
-SidreIOHandle::list_child_names(std::vector<std::string> &res)
+SidreIOHandle::list_child_names(Node::StringVector &res)
 {
     // note: wrong mode errors are handled before dispatch to interface
 
@@ -339,7 +339,7 @@ SidreIOHandle::list_child_names(std::vector<std::string> &res)
         {
             oss.str("");
             oss << i;
-            res.push_back(oss.str());
+            res.emplace_back(oss.str().c_str(), oss.str().length());
         }
     }
     else
@@ -352,7 +352,7 @@ SidreIOHandle::list_child_names(std::vector<std::string> &res)
 //-----------------------------------------------------------------------------
 void
 SidreIOHandle::list_child_names(const std::string &path,
-                                std::vector<std::string> &res)
+                                Node::StringVector &res)
 {
     // note: wrong mode errors are handled before dispatch to interface
 
@@ -753,7 +753,7 @@ SidreIOHandle::sidre_meta_tree_has_path(const Node &sidre_meta,
 void
 SidreIOHandle::sidre_meta_tree_list_child_names(const Node &sidre_meta,
                                                 const std::string &path,
-                                                std::vector<std::string> &res)
+                                                Node::StringVector &res)
 {
     res.clear();
 
@@ -769,7 +769,7 @@ SidreIOHandle::sidre_meta_tree_list_child_names(const Node &sidre_meta,
             while(g_itr.has_next())
             {
                 g_itr.next();
-                res.push_back(g_itr.name());
+                res.emplace_back(g_itr.name().c_str(), g_itr.name().length());
             }
         }
 
@@ -779,7 +779,7 @@ SidreIOHandle::sidre_meta_tree_list_child_names(const Node &sidre_meta,
             while(v_itr.has_next())
             {
                 v_itr.next();
-                res.push_back(v_itr.name());
+                res.emplace_back(v_itr.name().c_str(), v_itr.name().length());
             }
         }
     }
@@ -792,7 +792,7 @@ SidreIOHandle::sidre_meta_tree_list_child_names(const Node &sidre_meta,
             while(g_itr.has_next())
             {
                 g_itr.next();
-                res.push_back(g_itr.name());
+                res.emplace_back(g_itr.name().c_str(), g_itr.name().length());
             }
         }
 
@@ -802,7 +802,7 @@ SidreIOHandle::sidre_meta_tree_list_child_names(const Node &sidre_meta,
             while(v_itr.has_next())
             {
                 v_itr.next();
-                res.push_back(v_itr.name());
+                res.emplace_back(v_itr.name().c_str(), v_itr.name().length());
             }
         }
     }
@@ -814,7 +814,7 @@ SidreIOHandle::sidre_meta_tree_list_child_names(const Node &sidre_meta,
 void
 SidreIOHandle::sidre_meta_tree_list_child_names(int tree_id,
                                                 const std::string &path,
-                                                std::vector<std::string> &res)
+                                                Node::StringVector &res)
 {
     res.clear();
     // this will throw an error if we try to access a bad path

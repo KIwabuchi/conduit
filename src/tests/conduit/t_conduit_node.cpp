@@ -130,25 +130,35 @@ TEST(conduit_node, list)
     for(int i=0;i<100;i++)
         vec.push_back(i);
 
-    Node n;
-    Node& list = n["mylist"];
     uint32   a_val  = 10;
     uint32   b_val  = 20;
     float64  c_val  = 30.0;
-    list.append().set(a_val);
-    list.append().set(b_val);
-    list.append().set(c_val);
-    list.append().set(vec);
-    EXPECT_EQ(list[0].as_uint32(),a_val);
-    EXPECT_EQ(list[1].as_uint32(),b_val);
-    EXPECT_EQ(list[2].as_float64(),c_val);
-    EXPECT_EQ(list[3].as_uint32_ptr()[99],99);
 
-    EXPECT_EQ(n["mylist"][0].as_uint32(),a_val);
-    EXPECT_EQ(n["mylist"][1].as_uint32(),b_val);
-    EXPECT_EQ(n["mylist"][2].as_float64(),c_val);
-    EXPECT_EQ(n["mylist"][3].as_uint32_ptr()[99],99);
+    {
+      metall::manager manager(metall::create_only, "/tmp/metall");
+      Node &n = *manager.construct<Node>(metall::unique_instance)(
+          manager.get_allocator());
+      Node &list = n["mylist"];
+      list.append().set(a_val);
+      list.append().set(b_val);
+      list.append().set(c_val);
+      list.append().set(vec);
+    }
 
+    {
+      metall::manager manager(metall::open_read_only, "/tmp/metall");
+      Node &n = *manager.find<Node>(metall::unique_instance).first;
+      Node &list = n["mylist"];
+      EXPECT_EQ(list[0].as_uint32(), a_val);
+      EXPECT_EQ(list[1].as_uint32(), b_val);
+      EXPECT_EQ(list[2].as_float64(), c_val);
+      EXPECT_EQ(list[3].as_uint32_ptr()[99], 99);
+
+      EXPECT_EQ(n["mylist"][0].as_uint32(), a_val);
+      EXPECT_EQ(n["mylist"][1].as_uint32(), b_val);
+      EXPECT_EQ(n["mylist"][2].as_float64(), c_val);
+      EXPECT_EQ(n["mylist"][3].as_uint32_ptr()[99], 99);
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -230,20 +240,28 @@ TEST(conduit_node, simple_schema)
     uint32   b_val  = 20;
     float64  c_val  = 30.0;
 
-    Node n;
-    n["a"] = a_val;
-    n["b"] = b_val;
-    n["c"] = c_val;
-    n["here"]["there"] = c_val;
+    {
+      metall::manager manager(metall::create_only, "/tmp/metall");
+      Node &n = *manager.construct<Node>(metall::unique_instance)(
+          manager.get_allocator());
+      n["a"] = a_val;
+      n["b"] = b_val;
+      n["c"] = c_val;
+      n["here"]["there"] = c_val;
+    }
 
-    std::string res = n.schema().to_json();
-    std::cout << res;
-    conduit_rapidjson::Document d;
-    d.Parse<0>(res.c_str());
+    {
+      metall::manager manager(metall::open_read_only, "/tmp/metall");
+      Node &n = *manager.find<Node>(metall::unique_instance).first;
+      std::string res = n.schema().to_json();
+      std::cout << res;
+      conduit_rapidjson::Document d;
+      d.Parse<0>(res.c_str());
 
-    EXPECT_TRUE(d.HasMember("a"));
-    EXPECT_TRUE(d.HasMember("b"));
-    EXPECT_TRUE(d.HasMember("c"));
+      EXPECT_TRUE(d.HasMember("a"));
+      EXPECT_TRUE(d.HasMember("b"));
+      EXPECT_TRUE(d.HasMember("c"));
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -253,17 +271,24 @@ TEST(conduit_node, simple_schema_parent)
     uint32   b_val  = 20;
     float64  c_val  = 30.0;
 
-    Node n;
-    n["a"] = a_val;
-    n["b"] = b_val;
-    n["c"] = c_val;
-    n["here"]["there"] = c_val;
+    {
+      metall::manager manager(metall::create_only, "/tmp/metall");
+      Node &n = *manager.construct<Node>(metall::unique_instance)(
+          manager.get_allocator());
+      n["a"] = a_val;
+      n["b"] = b_val;
+      n["c"] = c_val;
+      n["here"]["there"] = c_val;
+    }
 
-    EXPECT_TRUE(n.schema().is_root());
-    Node & na = n["a"];
-    const Schema &na_schema =na.schema();
-    EXPECT_FALSE(na_schema.is_root());
-
+    {
+      metall::manager manager(metall::open_read_only, "/tmp/metall");
+      Node &n = *manager.find<Node>(metall::unique_instance).first;
+      EXPECT_TRUE(n.schema().is_root());
+      Node &na = n["a"];
+      const Schema &na_schema = na.schema();
+      EXPECT_FALSE(na_schema.is_root());
+    }
 }
 
 

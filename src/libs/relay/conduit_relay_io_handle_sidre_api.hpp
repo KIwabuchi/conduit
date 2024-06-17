@@ -43,9 +43,9 @@ public:
 
     void remove(const std::string &path);
 
-    void list_child_names(std::vector<std::string> &res);
+    void list_child_names(Node::StringVector &res);
     void list_child_names(const std::string &path,
-                          std::vector<std::string> &res);
+                          Node::StringVector &res);
 
     bool has_path(const std::string &path);
 
@@ -103,7 +103,7 @@ private:
 
     void sidre_meta_tree_list_child_names(const Node &sidre_meta,
                                           const std::string &path,
-                                          std::vector<std::string> &res);
+                                          Node::StringVector &res);
 
     void read_from_root(const std::string &path,
                         Node &node);
@@ -125,7 +125,7 @@ private:
 
     void sidre_meta_tree_list_child_names(int tree_id,
                                           const std::string &path,
-                                          std::vector<std::string> &res);
+                                          Node::StringVector &res);
 
     bool                     m_open;
     bool                     m_has_spio_index;
