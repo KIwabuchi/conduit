@@ -1443,9 +1443,9 @@ Node::set_string(const std::string &data)
     size_t ele_bytes = (size_t) dtype().element_bytes();
     size_t stride    = (size_t) dtype().stride();
     const char *data_ptr = data.c_str();
-    
-    // Note: 
-    // conduit_memcpy_strided_elements will use a single 
+
+    // Note:
+    // conduit_memcpy_strided_elements will use a single
     // conduit_memcpy for cases where src and dest are compactly strided.
     //
     // element_ptr(0) gets us to start of dest
@@ -1485,8 +1485,8 @@ Node::set_char8_str(const char *data)
     size_t ele_bytes = (size_t) dtype().element_bytes();
     size_t stride    = (size_t) dtype().stride();
 
-    // Note: 
-    // conduit_memcpy_strided_elements will use a single 
+    // Note:
+    // conduit_memcpy_strided_elements will use a single
     // conduit_memcpy for cases where src and dest are compactly strided.
     //
     // element_ptr(0) gets us to start of dest
@@ -8768,7 +8768,7 @@ Node::swap(Node &n_b)
     }
 
     // swap-o-rama
-    
+
     // things we need to swap
     // schema pointer
     // schema parent pointer
@@ -8788,7 +8788,7 @@ Node::swap(Node &n_b)
     std::swap(m_allocator_id,n_b.m_allocator_id);
     // this should be an efficient O(1)
     std::swap(m_children,n_b.m_children);
-
+    std::swap(m_allocator, n_b.m_allocator);
 }
 
 
