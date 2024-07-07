@@ -4420,6 +4420,8 @@ public:
     long_double_accessor  as_long_double_accessor() const;
 #endif
 
+    allocator_type get_allocator();
+
 
 //-----------------------------------------------------------------------------
 ///@}

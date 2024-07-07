@@ -23,6 +23,12 @@
 //-----------------------------------------------------------------------------
 namespace conduit
 {
+
+template <typename T, typename AllocatorType, typename ...Args>
+T* general_construct(AllocatorType a, Args&&... args);
+template <typename AllocatorType, typename T>
+void general_destroy(AllocatorType a, T* node);
+
 //-----------------------------------------------------------------------------
 // -- begin conduit::Generator --
 //-----------------------------------------------------------------------------

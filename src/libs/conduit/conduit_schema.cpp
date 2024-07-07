@@ -117,6 +117,8 @@ void
 Schema::set(const Schema &schema)
 {
     reset();
+    m_allocator = schema.m_allocator;
+
     bool init_children = false;
     index_t dt_id = schema.m_dtype.id();
     if (dt_id == DataType::OBJECT_ID)

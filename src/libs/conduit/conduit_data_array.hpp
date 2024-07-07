@@ -13,6 +13,8 @@
 
 #include <initializer_list>
 
+#include <metall/metall.hpp>
+
 //-----------------------------------------------------------------------------
 // -- conduit  includes -- 
 //-----------------------------------------------------------------------------
@@ -40,7 +42,10 @@ namespace conduit
 template <typename T> 
 class CONDUIT_API DataArray
 {
-public: 
+  using allocator_type = metall::manager::fallback_allocator<void>;
+  using void_pointer = typename allocator_type::pointer;
+
+public:
 //-----------------------------------------------------------------------------
 //
 // -- conduit::DataType public methods --
@@ -79,13 +84,13 @@ public:
 
     void           *element_ptr(index_t idx)
                     {
-                        return static_cast<char*>(m_data) +
+                        return static_cast<char*>(metall::to_raw_pointer(m_data)) +
                             m_dtype.element_index(idx);
                     };
 
     const void     *element_ptr(index_t idx) const 
                     {
-                         return static_cast<char*>(m_data) +
+                         return static_cast<char*>(metall::to_raw_pointer(m_data)) +
                             m_dtype.element_index(idx);
                     };
 
@@ -94,7 +99,7 @@ public:
     const DataType &dtype()    const 
                         { return m_dtype;} 
     void           *data_ptr() const 
-                        { return m_data;}
+                        { return metall::to_raw_pointer(m_data);}
 
     bool            compatible(const DataArray<T> &array) const;
     bool            diff(const DataArray<T> &array,
@@ -391,7 +396,7 @@ private:
 //
 //-----------------------------------------------------------------------------
     /// holds data (always external, never allocated)
-    void           *m_data;
+    void_pointer    m_data;
     /// holds data description
     DataType        m_dtype;
     
