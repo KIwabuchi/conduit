@@ -1214,7 +1214,8 @@ Generator::Parser::JSON::walk_pure_json_schema(Node *node,
 
             Schema *curr_schema = &schema->add_child(entry_name);
 
-            Node *curr_node = new Node();
+            Node *curr_node = general_construct<Node>(node->get_allocator(),
+                                                      node->get_allocator());
             curr_node->set_schema_ptr(curr_schema);
             curr_node->set_parent(node);
             node->append_node_ptr(curr_node);
@@ -1251,7 +1252,8 @@ Generator::Parser::JSON::walk_pure_json_schema(Node *node,
             {
                 schema->append();
                 Schema *curr_schema = schema->child_ptr(i);
-                Node * curr_node = new Node();
+                Node *curr_node = general_construct<Node>(node->get_allocator(),
+                                                          node->get_allocator());
                 curr_node->set_schema_ptr(curr_schema);
                 curr_node->set_parent(node);
                 node->append_node_ptr(curr_node);
@@ -1356,7 +1358,8 @@ Generator::Parser::JSON::walk_json_schema(Node   *node,
                 {
                     schema->append();
                     Schema *curr_schema = schema->child_ptr(i);
-                    Node *curr_node = new Node();
+                    Node *curr_node = general_construct<Node>(node->get_allocator(),
+                                                              node->get_allocator());
                     curr_node->set_schema_ptr(curr_schema);
                     curr_node->set_parent(node);
                     node->append_node_ptr(curr_node);
@@ -1445,7 +1448,8 @@ Generator::Parser::JSON::walk_json_schema(Node   *node,
 
                 Schema *curr_schema = &schema->add_child(entry_name);
                 
-                Node *curr_node = new Node();
+                Node *curr_node = general_construct<Node>(node->get_allocator(),
+                                                          node->get_allocator());
                 curr_node->set_schema_ptr(curr_schema);
                 curr_node->set_parent(node);
                 node->append_node_ptr(curr_node);
@@ -1471,7 +1475,8 @@ Generator::Parser::JSON::walk_json_schema(Node   *node,
         {
             schema->append();
             Schema *curr_schema = schema->child_ptr(i);
-            Node *curr_node = new Node();
+            Node *curr_node = general_construct<Node>(node->get_allocator(),
+                                                          node->get_allocator());
             curr_node->set_schema_ptr(curr_schema);
             curr_node->set_parent(node);
             node->append_node_ptr(curr_node);
@@ -1560,7 +1565,8 @@ Generator::Parser::JSON::walk_json_schema_external(Node   *node,
                 {
                     schema->append();
                     Schema *curr_schema = schema->child_ptr(i);
-                    Node *curr_node = new Node();
+                    Node *curr_node = general_construct<Node>(node->get_allocator(),
+                                                          node->get_allocator());
                     curr_node->set_schema_ptr(curr_schema);
                     curr_node->set_parent(node);
                     node->append_node_ptr(curr_node);
@@ -1639,7 +1645,8 @@ Generator::Parser::JSON::walk_json_schema_external(Node   *node,
 
                 Schema *curr_schema = &schema->add_child(entry_name);
                 
-                Node *curr_node = new Node();
+                Node *curr_node = general_construct<Node>(node->get_allocator(),
+                                                          node->get_allocator());
                 curr_node->set_schema_ptr(curr_schema);
                 curr_node->set_parent(node);
                 node->append_node_ptr(curr_node);
@@ -1665,7 +1672,8 @@ Generator::Parser::JSON::walk_json_schema_external(Node   *node,
         {
             schema->append();
             Schema *curr_schema = schema->child_ptr(i);
-            Node *curr_node = new Node();
+            Node *curr_node = general_construct<Node>(node->get_allocator(),
+                                                          node->get_allocator());
             curr_node->set_schema_ptr(curr_schema);
             curr_node->set_parent(node);
             node->append_node_ptr(curr_node);
@@ -2202,7 +2210,8 @@ Generator::Parser::YAML::walk_pure_yaml_schema(Node *node,
 
             Schema *curr_schema = &schema->add_child(entry_name);
 
-            Node *curr_node = new Node();
+            Node *curr_node = general_construct<Node>(node->get_allocator(),
+                                                          node->get_allocator());
             curr_node->set_schema_ptr(curr_schema);
             curr_node->set_parent(node);
             node->append_node_ptr(curr_node);
@@ -2253,7 +2262,8 @@ Generator::Parser::YAML::walk_pure_yaml_schema(Node *node,
 
                 schema->append();
                 Schema *curr_schema = schema->child_ptr(cld_idx);
-                Node * curr_node = new Node();
+                Node * curr_node = general_construct<Node>(node->get_allocator(),
+                                                          node->get_allocator());
                 curr_node->set_schema_ptr(curr_schema);
                 curr_node->set_parent(node);
                 node->append_node_ptr(curr_node);
@@ -2593,6 +2603,15 @@ Generator::walk_external(Node &node) const
     }
 }
 
+template <typename T, typename AllocatorType, typename... Args>
+T *general_construct(AllocatorType a, Args &&...args) {
+  using AT =
+      typename std::allocator_traits<AllocatorType>::template rebind_alloc<T>;
+  AT alloc(a);
+  auto data = alloc.allocate(1);
+  alloc.construct(data, std::forward<Args>(args)...);
+  return metall::to_raw_pointer(data);
+}
 
 //-----------------------------------------------------------------------------
 // -- end conduit::Generator --
