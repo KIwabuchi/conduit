@@ -204,7 +204,9 @@ endif()
 
 include(FetchContent)
 
-cmake_policy(SET CMP0167 NEW)
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.26.0")
+    cmake_policy(SET CMP0167 NEW)
+endif()
 # Boost header files are required for using Metall.
 find_package(Boost 1.64)
 # Download Boost if it does not exit.
