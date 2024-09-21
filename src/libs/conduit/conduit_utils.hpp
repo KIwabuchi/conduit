@@ -21,6 +21,7 @@
 #include <sstream>
 #include <chrono>
 #include <cstdlib>
+#include <memory>
 
 //-----------------------------------------------------------------------------
 // -- conduit includes --

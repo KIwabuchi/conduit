@@ -100,13 +100,17 @@ namespace conduit
 //-----------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------//
-Node::Node()
+Node::Node(const allocator_type& alloc)
+: m_children(alloc),
+  m_allocator(alloc)
 {
     init_defaults();
 }
 
 //---------------------------------------------------------------------------//
 Node::Node(const Node &node)
+    : m_children(node.m_allocator),
+      m_allocator(node.m_allocator)
 {
     init_defaults();
     set(node);
@@ -131,7 +135,9 @@ Node::reset()
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
-Node::Node(const Schema &schema)
+Node::Node(const Schema &schema, const allocator_type& alloc)
+    : m_children(alloc),
+      m_allocator(alloc)
 
 {
     init_defaults();
@@ -140,7 +146,10 @@ Node::Node(const Schema &schema)
 
 //---------------------------------------------------------------------------//
 Node::Node(const Generator &gen,
-           bool external)
+           bool external,
+           const allocator_type& alloc)
+    : m_children(alloc),
+      m_allocator(alloc)
 {
     init_defaults();
     if(external)
@@ -157,7 +166,10 @@ Node::Node(const Generator &gen,
 //---------------------------------------------------------------------------//
 Node::Node(const std::string &schema,
            void *data,
-           bool external)
+           bool external,
+           const allocator_type& alloc)
+    : m_children(alloc),
+      m_allocator(alloc)
 {
     init_defaults();
     Generator g(schema,"conduit_json",data);
@@ -174,17 +186,22 @@ Node::Node(const std::string &schema,
 }
 
 //---------------------------------------------------------------------------//
-Node::Node(const DataType &dtype)
+Node::Node(const DataType &dtype,
+           const allocator_type &alloc)
+    : m_children(alloc),
+      m_allocator(alloc)
 {
-    init_defaults();
+  init_defaults();
     set(dtype);
 }
 
 //---------------------------------------------------------------------------//
 Node::Node(const Schema &schema,
            void *data,
-           bool external)
-{
+           bool external,
+           const allocator_type &alloc)
+    : m_children(alloc),
+      m_allocator(alloc) {
     init_defaults();
 
     if(external)
@@ -201,8 +218,10 @@ Node::Node(const Schema &schema,
 //---------------------------------------------------------------------------//
 Node::Node(const DataType &dtype,
            void *data,
-           bool external)
-{
+           bool external,
+           const allocator_type &alloc)
+    : m_children(alloc),
+      m_allocator(alloc) {
     init_defaults();
     if(external)
     {
@@ -303,7 +322,7 @@ Node::load(const std::string &stream_path,
     {
         CONDUIT_ERROR("<Node::load> failed to open: " << stream_path);
     }
-    ifs.read((char *)m_data,dsize);
+    ifs.read((char *)metall::to_raw_pointer(m_data),dsize);
     ifs.close();
 
     //
@@ -312,7 +331,7 @@ Node::load(const std::string &stream_path,
     m_alloced = false;
 
     m_schema->set(schema);
-    walk_schema(this,m_schema,m_data,m_allocator_id);
+    walk_schema(this,metall::to_raw_pointer(m_schema),metall::to_raw_pointer(m_data),m_allocator_id,m_allocator);
 
     ///
     /// TODO: Design Issue
@@ -435,7 +454,7 @@ Node::mmap(const std::string &stream_path,
 
     m_schema->set(schema);
 
-    walk_schema(this,m_schema,m_data, m_allocator_id);
+    walk_schema(this,metall::to_raw_pointer(m_schema),metall::to_raw_pointer(m_data), m_allocator_id,m_allocator);
 
     ///
     /// TODO: Design Issue
@@ -473,14 +492,13 @@ Node::set_node(const Node &node)
         reset();
         init(DataType::object());
 
-        const std::vector<std::string> &cld_names = node.child_names();
+        const auto &cld_names = node.child_names();
 
-        for (std::vector<std::string>::const_iterator itr = cld_names.begin();
-             itr < cld_names.end(); ++itr)
+        for (auto itr = cld_names.cbegin(); itr < cld_names.cend(); ++itr)
         {
             Schema *curr_schema = &this->m_schema->add_child(*itr);
             size_t idx = (size_t) this->m_schema->child_index(*itr);
-            Node *curr_node = new Node();
+            Node *curr_node = allocate<Node>(m_allocator);
             curr_node->set_allocator(m_allocator_id);
             curr_node->set_schema_ptr(curr_schema);
             curr_node->set_parent(this);
@@ -496,7 +514,7 @@ Node::set_node(const Node &node)
         {
             this->m_schema->append();
             Schema *curr_schema = this->m_schema->child_ptr(i);
-            Node *curr_node = new Node();
+            Node *curr_node = allocate<Node>(m_allocator);
             curr_node->set_allocator(m_allocator_id);
             curr_node->set_schema_ptr(curr_schema);
             curr_node->set_parent(this);
@@ -546,9 +564,9 @@ Node::set_schema(const Schema &schema)
     // for this case, we need the total bytes spanned by the schema
     size_t nbytes =(size_t) m_schema->spanned_bytes();
     allocate(nbytes);
-    utils::conduit_memset(m_data,0,nbytes);
+    utils::conduit_memset(metall::to_raw_pointer(m_data),0,nbytes);
     // call walk w/ internal data pointer
-    walk_schema(this,m_schema,m_data,m_allocator_id);
+    walk_schema(this,metall::to_raw_pointer(m_schema),metall::to_raw_pointer(m_data),m_allocator_id,m_allocator);
 }
 
 //---------------------------------------------------------------------------//
@@ -569,8 +587,8 @@ Node::set_data_using_schema(const Schema &schema,
     // for this case, we need the total bytes spanned by the schema
     size_t nbytes = (size_t)m_schema->spanned_bytes();
     allocate(nbytes);
-    utils::conduit_memcpy(m_data, data, nbytes);
-    walk_schema(this,m_schema,m_data,m_allocator_id);
+    utils::conduit_memcpy(metall::to_raw_pointer(m_data), data, nbytes);
+    walk_schema(this,metall::to_raw_pointer(m_schema),metall::to_raw_pointer(m_data),m_allocator_id,m_allocator);
 }
 
 //---------------------------------------------------------------------------//
@@ -589,10 +607,10 @@ Node::set_data_using_dtype(const DataType &dtype,
     release();
     m_schema->set(dtype);
     allocate(m_schema->spanned_bytes());
-    utils::conduit_memcpy(m_data,
+    utils::conduit_memcpy(metall::to_raw_pointer(m_data),
                           data,
                           (size_t) m_schema->spanned_bytes());
-    walk_schema(this,m_schema,m_data,m_allocator_id);
+    walk_schema(this,metall::to_raw_pointer(m_schema),metall::to_raw_pointer(m_data),m_allocator_id,m_allocator);
 }
 
 //---------------------------------------------------------------------------//
@@ -1425,9 +1443,9 @@ Node::set_string(const std::string &data)
     size_t ele_bytes = (size_t) dtype().element_bytes();
     size_t stride    = (size_t) dtype().stride();
     const char *data_ptr = data.c_str();
-    
-    // Note: 
-    // conduit_memcpy_strided_elements will use a single 
+
+    // Note:
+    // conduit_memcpy_strided_elements will use a single
     // conduit_memcpy for cases where src and dest are compactly strided.
     //
     // element_ptr(0) gets us to start of dest
@@ -1467,8 +1485,8 @@ Node::set_char8_str(const char *data)
     size_t ele_bytes = (size_t) dtype().element_bytes();
     size_t stride    = (size_t) dtype().stride();
 
-    // Note: 
-    // conduit_memcpy_strided_elements will use a single 
+    // Note:
+    // conduit_memcpy_strided_elements will use a single
     // conduit_memcpy for cases where src and dest are compactly strided.
     //
     // element_ptr(0) gets us to start of dest
@@ -4545,7 +4563,7 @@ Node::set_external_node(const Node &node)
 {
     reset();
     m_schema->set(node.schema());
-    mirror_node(this,m_schema,&node);
+    mirror_node(this,metall::to_raw_pointer(m_schema),&node,m_allocator);
 }
 
 //---------------------------------------------------------------------------//
@@ -4562,7 +4580,7 @@ Node::set_external_data_using_schema(const Schema &schema,
 {
     reset();
     m_schema->set(schema);
-    walk_schema(this,m_schema,data,m_allocator_id);
+    walk_schema(this,metall::to_raw_pointer(m_schema),data,m_allocator_id,m_allocator);
 }
 
 //---------------------------------------------------------------------------//
@@ -8449,8 +8467,7 @@ Node::serialize(std::ofstream &ofs) const
     if( dtype_id == DataType::OBJECT_ID ||
         dtype_id == DataType::LIST_ID)
     {
-        std::vector<Node*>::const_iterator itr;
-        for(itr = m_children.begin(); itr < m_children.end(); ++itr)
+        for(auto itr = m_children.cbegin(); itr < m_children.cend(); ++itr)
         {
             (*itr)->serialize(ofs);
         }
@@ -8495,10 +8512,10 @@ Node::compact_to(Node &n_dest) const
     }
 
     m_schema->compact_to(*n_dest.schema_ptr());
-    uint8 *n_dest_data = (uint8*)n_dest.m_data;
+    uint8 *n_dest_data = (uint8*)metall::to_raw_pointer(n_dest.m_data);
     compact_to(n_dest_data,0);
     // need node structure
-    walk_schema(&n_dest,n_dest.m_schema,n_dest_data,m_allocator_id);
+    walk_schema(&n_dest,metall::to_raw_pointer(n_dest.m_schema),n_dest_data,m_allocator_id,m_allocator);
 }
 
 //-----------------------------------------------------------------------------
@@ -8516,10 +8533,9 @@ Node::update(const Node &n_src)
     index_t dtype_id = n_src.dtype().id();
     if( dtype_id == DataType::OBJECT_ID)
     {
-        const std::vector<std::string> &scld_names = n_src.child_names();
+        const auto &scld_names = n_src.child_names();
 
-        for (std::vector<std::string>::const_iterator itr = scld_names.begin();
-             itr < scld_names.end(); ++itr)
+        for (auto itr = scld_names.cbegin(); itr < scld_names.cend(); ++itr)
         {
             std::string ent_name = *itr;
             // note: this (add_child) will add or access existing child
@@ -8592,10 +8608,9 @@ Node::update_compatible(const Node &n_src)
     index_t dtype_id = n_src.dtype().id();
     if( dtype_id == DataType::OBJECT_ID)
     {
-        const std::vector<std::string> &scld_names = n_src.child_names();
+        const auto &scld_names = n_src.child_names();
 
-        for (std::vector<std::string>::const_iterator itr = scld_names.begin();
-             itr < scld_names.end(); ++itr)
+        for (auto itr = scld_names.cbegin(); itr < scld_names.cend(); ++itr)
         {
             std::string ent_name = *itr;
             if(has_child(ent_name))
@@ -8655,10 +8670,9 @@ Node::update_external(Node &n_src)
     index_t dtype_id = n_src.dtype().id();
     if( dtype_id == DataType::OBJECT_ID)
     {
-        const std::vector<std::string> &scld_names = n_src.child_names();
+        const auto &scld_names = n_src.child_names();
 
-        for (std::vector<std::string>::const_iterator itr = scld_names.begin();
-             itr < scld_names.end(); ++itr)
+        for (auto itr = scld_names.cbegin(); itr < scld_names.cend(); ++itr)
         {
             std::string ent_name = *itr;
             // note: this (add_child) will add or access existing child
@@ -8714,8 +8728,8 @@ Node::move(Node &n)
 void
 Node::swap(Node &n_b)
 {
-    Schema *schema_a = m_schema;
-    Schema *schema_b = n_b.m_schema;
+    Schema *schema_a = metall::to_raw_pointer(m_schema);
+    Schema *schema_b = metall::to_raw_pointer(n_b.m_schema);
 
     // check if node a has a parent Node
     if(this->parent() != NULL)
@@ -8754,7 +8768,7 @@ Node::swap(Node &n_b)
     }
 
     // swap-o-rama
-    
+
     // things we need to swap
     // schema pointer
     // schema parent pointer
@@ -8774,7 +8788,7 @@ Node::swap(Node &n_b)
     std::swap(m_allocator_id,n_b.m_allocator_id);
     // this should be an efficient O(1)
     std::swap(m_children,n_b.m_children);
-
+    std::swap(m_allocator, n_b.m_allocator);
 }
 
 
@@ -14270,7 +14284,7 @@ Node::add_child(const std::string &name)
 
     Schema &child_schema = m_schema->add_child(name);
     Schema *child_ptr = &child_schema;
-    Node *child_node = new Node();
+    Node *child_node = allocate<Node>(m_allocator);
     child_node->set_allocator(m_allocator_id);
     child_node->set_schema_ptr(child_ptr);
     child_node->m_parent = this;
@@ -14457,7 +14471,7 @@ Node::fetch(const std::string &path)
     if(!m_schema->has_child(p_curr))
     {
         Schema *schema_ptr = m_schema->fetch_ptr(p_curr);
-        Node *curr_node = new Node();
+        Node *curr_node = allocate<Node>(m_allocator);
         curr_node->set_allocator(m_allocator_id);
         curr_node->set_schema_ptr(schema_ptr);
         curr_node->m_parent = this;
@@ -14616,7 +14630,7 @@ Node::has_path(const std::string &path) const
 }
 
 //---------------------------------------------------------------------------//
-const std::vector<std::string>&
+const Schema::object_vector_type&
 Node::child_names() const
 {
     return m_schema->child_names();
@@ -14634,7 +14648,7 @@ Node::append()
     m_schema->append();
     Schema *schema_ptr = m_schema->child_ptr(idx);
 
-    Node *res_node = new Node();
+    Node *res_node = allocate<Node>(m_allocator);
     res_node->set_allocator(m_allocator_id);
     res_node->set_schema_ptr(schema_ptr);
     res_node->m_parent=this;
@@ -14651,8 +14665,8 @@ Node::remove(index_t idx)
     // to cleanup
 
     // remove the proper list entry
-    delete m_children[(size_t)idx];
-    m_schema->remove(idx);
+    deallocate<Node>(m_children[(size_t)idx]);
+     m_schema->remove(idx);
     m_children.erase(m_children.begin() + (size_t)idx);
 }
 
@@ -14683,7 +14697,7 @@ Node::remove_child(const std::string &name)
    // note: we must remove the child pointer before the
    // schema. b/c the child pointer uses the schema
    // to cleanup
-   delete m_children[idx];
+   deallocate<Node>(m_children[idx]);
    m_schema->remove_child(name);
    m_children.erase(m_children.begin() + idx);
 }
@@ -15179,7 +15193,7 @@ Node::as_int8_array()
                         DataType::INT8_ID,
                         "as_int8_array()",
                         int8_array());
-    return int8_array(m_data,dtype());
+    return int8_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -15190,7 +15204,7 @@ Node::as_int16_array()
                         DataType::INT16_ID,
                         "as_int16_array()",
                         int16_array());
-    return int16_array(m_data,dtype());
+    return int16_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -15201,7 +15215,7 @@ Node::as_int32_array()
                         DataType::INT32_ID,
                         "as_int32_array()",
                         int32_array());
-    return int32_array(m_data,dtype());
+    return int32_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -15212,7 +15226,7 @@ Node::as_int64_array()
                         DataType::INT64_ID,
                         "as_int64_array()",
                         int64_array());
-    return int64_array(m_data,dtype());
+    return int64_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -15227,7 +15241,7 @@ Node::as_uint8_array()
                         DataType::UINT8_ID,
                         "as_uint8_array()",
                         uint8_array());
-    return uint8_array(m_data,dtype());
+    return uint8_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -15238,7 +15252,7 @@ Node::as_uint16_array()
                         DataType::UINT16_ID,
                         "as_uint16_array()",
                         uint16_array());
-    return uint16_array(m_data,dtype());
+    return uint16_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -15249,7 +15263,7 @@ Node::as_uint32_array()
                         DataType::UINT32_ID,
                         "as_uint32_array()",
                         uint32_array());
-    return uint32_array(m_data,dtype());
+    return uint32_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -15260,7 +15274,7 @@ Node::as_uint64_array()
                         DataType::UINT64_ID,
                         "as_uint64_array()",
                         uint64_array());
-    return uint64_array(m_data,dtype());
+    return uint64_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -15275,7 +15289,7 @@ Node::as_float32_array()
                         DataType::FLOAT32_ID,
                         "as_float32_array()",
                         float32_array());
-    return float32_array(m_data,dtype());
+    return float32_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -15286,7 +15300,7 @@ Node::as_float64_array()
                         DataType::FLOAT64_ID,
                         "as_float64_array()",
                         float64_array());
-    return float64_array(m_data,dtype());
+    return float64_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -15297,7 +15311,7 @@ Node::as_index_t_array() const
                         DataType::index_t(1).id(),
                         "as_index_t_array()",
                         index_t_array());
-    return index_t_array(m_data,dtype());
+    return index_t_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -15312,7 +15326,7 @@ Node::as_int8_array() const
                         DataType::INT8_ID,
                         "as_int8_array() const",
                         int8_array());
-    return int8_array(m_data,dtype());
+    return int8_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -15323,7 +15337,7 @@ Node::as_int16_array() const
                         DataType::INT16_ID,
                         "as_int16_array() const",
                         int16_array());
-    return int16_array(m_data,dtype());
+    return int16_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -15334,7 +15348,7 @@ Node::as_int32_array() const
                         DataType::INT32_ID,
                         "as_int32_array() const",
                         int32_array());
-    return int32_array(m_data,dtype());
+    return int32_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -15345,7 +15359,7 @@ Node::as_int64_array() const
                         DataType::INT64_ID,
                         "as_int64_array() const",
                         int64_array());
-    return int64_array(m_data,dtype());
+    return int64_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 
@@ -15361,7 +15375,7 @@ Node::as_uint8_array() const
                         DataType::UINT8_ID,
                         "as_uint8_array() const",
                         uint8_array());
-    return uint8_array(m_data,dtype());
+    return uint8_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -15372,7 +15386,7 @@ Node::as_uint16_array() const
                         DataType::UINT16_ID,
                         "as_uint16_array() const",
                         uint16_array());
-    return uint16_array(m_data,dtype());
+    return uint16_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -15383,7 +15397,7 @@ Node::as_uint32_array() const
                         DataType::UINT32_ID,
                         "as_uint32_array() const",
                         uint32_array());
-    return uint32_array(m_data,dtype());
+    return uint32_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -15394,7 +15408,7 @@ Node::as_uint64_array() const
                         DataType::UINT64_ID,
                         "as_uint64_array() const",
                         uint64_array());
-    return uint64_array(m_data,dtype());
+    return uint64_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -15409,7 +15423,7 @@ Node::as_float32_array() const
                         DataType::FLOAT32_ID,
                         "as_float32_array() const",
                         float32_array());
-    return float32_array(m_data,dtype());
+    return float32_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -15420,7 +15434,7 @@ Node::as_float64_array() const
                         DataType::FLOAT64_ID,
                         "as_float64_array() const",
                         float64_array());
-    return float64_array(m_data,dtype());
+    return float64_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -15470,28 +15484,28 @@ Node::as_string() const
 int8_accessor
 Node::as_int8_accessor() const
 {
-    return int8_accessor(m_data,dtype());
+    return int8_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
 int16_accessor
 Node::as_int16_accessor() const
 {
-    return int16_accessor(m_data,dtype());
+    return int16_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
 int32_accessor
 Node::as_int32_accessor() const
 {
-    return int32_accessor(m_data,dtype());
+    return int32_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
 int64_accessor
 Node::as_int64_accessor() const
 {
-    return int64_accessor(m_data,dtype());
+    return int64_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -15502,28 +15516,28 @@ Node::as_int64_accessor() const
 uint8_accessor
 Node::as_uint8_accessor() const
 {
-    return uint8_accessor(m_data,dtype());
+    return uint8_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
 uint16_accessor
 Node::as_uint16_accessor() const
 {
-    return uint16_accessor(m_data,dtype());
+    return uint16_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
 uint32_accessor
 Node::as_uint32_accessor() const
 {
-    return uint32_accessor(m_data,dtype());
+    return uint32_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
 uint64_accessor
 Node::as_uint64_accessor() const
 {
-    return uint64_accessor(m_data,dtype());
+    return uint64_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -15534,21 +15548,21 @@ Node::as_uint64_accessor() const
 float32_accessor
 Node::as_float32_accessor() const
 {
-    return float32_accessor(m_data,dtype());
+    return float32_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
 float64_accessor
 Node::as_float64_accessor() const
 {
-    return float64_accessor(m_data,dtype());
+    return float64_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
 index_t_accessor
 Node::as_index_t_accessor() const
 {
-    return index_t_accessor(m_data,dtype());
+    return index_t_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 
@@ -15558,14 +15572,14 @@ Node::as_index_t_accessor() const
 void *
 Node::data_ptr()
 {
-    return m_data;
+    return metall::to_raw_pointer(m_data);
 }
 
 //---------------------------------------------------------------------------//
 const void *
 Node::data_ptr() const
 {
-    return m_data;
+    return metall::to_raw_pointer(m_data);
 }
 
 
@@ -16314,7 +16328,7 @@ Node::as_char_array()
                         CONDUIT_NATIVE_CHAR_ID,
                         "as_char_array()",
                         char_array());
-    return char_array(m_data,dtype());
+    return char_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16325,7 +16339,7 @@ Node::as_short_array()
                         CONDUIT_NATIVE_SHORT_ID,
                         "as_short_array()",
                         short_array());
-    return short_array(m_data,dtype());
+    return short_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16336,7 +16350,7 @@ Node::as_int_array()
                         CONDUIT_NATIVE_INT_ID,
                         "as_int_array()",
                         int_array());
-    return int_array(m_data,dtype());
+    return int_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16347,7 +16361,7 @@ Node::as_long_array()
                         CONDUIT_NATIVE_LONG_ID,
                         "as_long_array()",
                         long_array());
-    return long_array(m_data,dtype());
+    return long_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16361,7 +16375,7 @@ Node::as_long_long_array()
                         CONDUIT_NATIVE_LONG_LONG_ID,
                         "as_long_long_array()",
                         long_long_array());
-    return long_long_array(m_data,dtype());
+    return long_long_array(metall::to_raw_pointer(m_data),dtype());
 }
 //---------------------------------------------------------------------------//
 #endif
@@ -16380,7 +16394,7 @@ Node::as_signed_char_array()
                         CONDUIT_NATIVE_SIGNED_CHAR_ID,
                         "as_signed_char_array()",
                         signed_char_array());
-    return signed_char_array(m_data,dtype());
+    return signed_char_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16391,7 +16405,7 @@ Node::as_signed_short_array()
                         CONDUIT_NATIVE_SIGNED_SHORT_ID,
                         "as_signed_short_array()",
                         signed_short_array());
-    return signed_short_array(m_data,dtype());
+    return signed_short_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16402,7 +16416,7 @@ Node::as_signed_int_array()
                         CONDUIT_NATIVE_SIGNED_INT_ID,
                         "as_signed_int_array()",
                         int_array());
-    return signed_int_array(m_data,dtype());
+    return signed_int_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16413,7 +16427,7 @@ Node::as_signed_long_array()
                         CONDUIT_NATIVE_SIGNED_LONG_ID,
                         "as_signed_long_array()",
                         signed_long_array());
-    return signed_long_array(m_data,dtype());
+    return signed_long_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16427,7 +16441,7 @@ Node::as_signed_long_long_array()
                         CONDUIT_NATIVE_SIGNED_LONG_LONG_ID,
                         "as_signed_long_long_array()",
                         signed_long_long_array());
-    return signed_long_long_array(m_data,dtype());
+    return signed_long_long_array(metall::to_raw_pointer(m_data),dtype());
 }
 //---------------------------------------------------------------------------//
 #endif
@@ -16446,7 +16460,7 @@ Node::as_unsigned_char_array()
                         CONDUIT_NATIVE_UNSIGNED_CHAR_ID,
                         "as_unsigned_char_array()",
                         unsigned_char_array());
-    return unsigned_char_array(m_data,dtype());
+    return unsigned_char_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16457,7 +16471,7 @@ Node::as_unsigned_short_array()
                         CONDUIT_NATIVE_UNSIGNED_SHORT_ID,
                         "as_unsigned_short_array()",
                         unsigned_short_array());
-    return unsigned_short_array(m_data,dtype());
+    return unsigned_short_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16468,7 +16482,7 @@ Node::as_unsigned_int_array()
                         CONDUIT_NATIVE_UNSIGNED_INT_ID,
                         "as_unsigned_int_array()",
                         unsigned_int_array());
-    return unsigned_int_array(m_data,dtype());
+    return unsigned_int_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16479,7 +16493,7 @@ Node::as_unsigned_long_array()
                         CONDUIT_NATIVE_UNSIGNED_LONG_ID,
                         "as_unsigned_long_array()",
                         unsigned_long_array());
-    return unsigned_long_array(m_data,dtype());
+    return unsigned_long_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16493,7 +16507,7 @@ Node::as_unsigned_long_long_array()
                         CONDUIT_NATIVE_UNSIGNED_LONG_LONG_ID,
                         "as_unsigned_long_long_array()",
                         unsigned_long_long_array());
-    return unsigned_long_long_array(m_data,dtype());
+    return unsigned_long_long_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16513,7 +16527,7 @@ Node::as_float_array()
                         CONDUIT_NATIVE_FLOAT_ID,
                         "as_float_array()",
                         float_array());
-    return float_array(m_data,dtype());
+    return float_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16524,7 +16538,7 @@ Node::as_double_array()
                         CONDUIT_NATIVE_DOUBLE_ID,
                         "as_double_array()",
                         double_array());
-    return double_array(m_data,dtype());
+    return double_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16537,7 +16551,7 @@ Node::as_long_double_array()
                         CONDUIT_NATIVE_LONG_DOUBLE_ID,
                         "as_long_double_array()",
                         long_double_array());
-    return long_double_array(m_data,dtype());
+    return long_double_array(metall::to_raw_pointer(m_data),dtype());
 }
 //---------------------------------------------------------------------------//
 #endif
@@ -16555,7 +16569,7 @@ Node::as_char_array() const
                         CONDUIT_NATIVE_CHAR_ID,
                         "as_char_array() const",
                         char_array());
-    return char_array(m_data,dtype());
+    return char_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16566,7 +16580,7 @@ Node::as_short_array() const
                         CONDUIT_NATIVE_SHORT_ID,
                         "as_short_array() const",
                         short_array());
-    return short_array(m_data,dtype());
+    return short_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16577,7 +16591,7 @@ Node::as_int_array() const
                         CONDUIT_NATIVE_INT_ID,
                         "as_int_array() const",
                         int_array());
-    return int_array(m_data,dtype());
+    return int_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16588,7 +16602,7 @@ Node::as_long_array() const
                         CONDUIT_NATIVE_LONG_ID,
                         "as_long_array() const",
                         long_array());
-    return long_array(m_data,dtype());
+    return long_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16601,7 +16615,7 @@ Node::as_long_long_array() const
                         CONDUIT_NATIVE_LONG_LONG_ID,
                         "as_long_long_array() const",
                         long_long_array());
-    return long_long_array(m_data,dtype());
+    return long_long_array(metall::to_raw_pointer(m_data),dtype());
 }
 //---------------------------------------------------------------------------//
 #endif
@@ -16620,7 +16634,7 @@ Node::as_signed_char_array() const
                         CONDUIT_NATIVE_SIGNED_CHAR_ID,
                         "as_signed_char_array() const",
                         signed_char_array());
-    return signed_char_array(m_data,dtype());
+    return signed_char_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16631,7 +16645,7 @@ Node::as_signed_short_array() const
                         CONDUIT_NATIVE_SIGNED_SHORT_ID,
                         "as_signed_short_array() const",
                         signed_short_array());
-    return signed_short_array(m_data,dtype());
+    return signed_short_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16642,7 +16656,7 @@ Node::as_signed_int_array() const
                         CONDUIT_NATIVE_SIGNED_INT_ID,
                         "as_signed_int_array() const",
                         signed_int_array());
-    return signed_int_array(m_data,dtype());
+    return signed_int_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16653,7 +16667,7 @@ Node::as_signed_long_array() const
                         CONDUIT_NATIVE_SIGNED_LONG_ID,
                         "as_signed_long_array() const",
                         signed_long_array());
-    return signed_long_array(m_data,dtype());
+    return signed_long_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16666,7 +16680,7 @@ Node::as_signed_long_long_array() const
                         CONDUIT_NATIVE_SIGNED_LONG_LONG_ID,
                         "as_signed_long_long_array() const",
                         signed_long_long_array());
-    return signed_long_long_array(m_data,dtype());
+    return signed_long_long_array(metall::to_raw_pointer(m_data),dtype());
 }
 //---------------------------------------------------------------------------//
 #endif
@@ -16685,7 +16699,7 @@ Node::as_unsigned_char_array() const
                         CONDUIT_NATIVE_UNSIGNED_CHAR_ID,
                         "as_unsigned_char_array() const",
                         unsigned_char_array());
-    return unsigned_char_array(m_data,dtype());
+    return unsigned_char_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16696,7 +16710,7 @@ Node::as_unsigned_short_array() const
                         CONDUIT_NATIVE_UNSIGNED_SHORT_ID,
                         "as_unsigned_short_array() const",
                         unsigned_short_array());
-    return unsigned_short_array(m_data,dtype());
+    return unsigned_short_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16707,7 +16721,7 @@ Node::as_unsigned_int_array() const
                         CONDUIT_NATIVE_UNSIGNED_INT_ID,
                         "as_unsigned_int_array() const",
                         unsigned_int_array());
-    return unsigned_int_array(m_data,dtype());
+    return unsigned_int_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16718,7 +16732,7 @@ Node::as_unsigned_long_array() const
                         CONDUIT_NATIVE_UNSIGNED_LONG_ID,
                         "as_unsigned_long_array() const",
                         unsigned_long_array());
-    return unsigned_long_array(m_data,dtype());
+    return unsigned_long_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16732,7 +16746,7 @@ Node::as_unsigned_long_long_array() const
                         CONDUIT_NATIVE_UNSIGNED_LONG_LONG_ID,
                         "as_unsigned_long_long_array() const",
                         unsigned_long_long_array());
-    return unsigned_long_long_array(m_data,dtype());
+    return unsigned_long_long_array(metall::to_raw_pointer(m_data),dtype());
 }
 //---------------------------------------------------------------------------//
 #endif
@@ -16751,7 +16765,7 @@ Node::as_float_array() const
                         CONDUIT_NATIVE_FLOAT_ID,
                         "as_float_array() const",
                         float_array());
-    return float_array(m_data,dtype());
+    return float_array(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16762,7 +16776,7 @@ Node::as_double_array() const
                         CONDUIT_NATIVE_DOUBLE_ID,
                         "as_double_array() const",
                         double_array());
-    return double_array(m_data,dtype());
+    return double_array(metall::to_raw_pointer(m_data),dtype());
 }
 //---------------------------------------------------------------------------//
 #ifdef CONDUIT_USE_LONG_DOUBLE
@@ -16844,28 +16858,28 @@ Node::allocator()
 char_accessor
 Node::as_char_accessor() const
 {
-    return char_accessor(m_data,dtype());
+    return char_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
 short_accessor
 Node::as_short_accessor() const
 {
-    return short_accessor(m_data,dtype());
+    return short_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
 int_accessor
 Node::as_int_accessor() const
 {
-    return int_accessor(m_data,dtype());
+    return int_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
 long_accessor
 Node::as_long_accessor() const
 {
-    return long_accessor(m_data,dtype());
+    return long_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16874,7 +16888,7 @@ Node::as_long_accessor() const
 long_long_accessor
 Node::as_long_long_accessor() const
 {
-    return long_long_accessor(m_data,dtype());
+    return long_long_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 //---------------------------------------------------------------------------//
 #endif
@@ -16889,28 +16903,28 @@ Node::as_long_long_accessor() const
 signed_char_accessor
 Node::as_signed_char_accessor() const
 {
-    return signed_char_accessor(m_data,dtype());
+    return signed_char_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
 signed_short_accessor
 Node::as_signed_short_accessor() const
 {
-    return signed_short_accessor(m_data,dtype());
+    return signed_short_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
 signed_int_accessor
 Node::as_signed_int_accessor() const
 {
-    return signed_int_accessor(m_data,dtype());
+    return signed_int_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
 signed_long_accessor
 Node::as_signed_long_accessor() const
 {
-    return signed_long_accessor(m_data,dtype());
+    return signed_long_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16919,7 +16933,7 @@ Node::as_signed_long_accessor() const
 signed_long_long_accessor
 Node::as_signed_long_long_accessor() const
 {
-    return signed_long_long_accessor(m_data,dtype());
+    return signed_long_long_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 //---------------------------------------------------------------------------//
 #endif
@@ -16934,28 +16948,28 @@ Node::as_signed_long_long_accessor() const
 unsigned_char_accessor
 Node::as_unsigned_char_accessor() const
 {
-    return unsigned_char_accessor(m_data,dtype());
+    return unsigned_char_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
 unsigned_short_accessor
 Node::as_unsigned_short_accessor() const
 {
-    return unsigned_short_accessor(m_data,dtype());
+    return unsigned_short_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
 unsigned_int_accessor
 Node::as_unsigned_int_accessor() const
 {
-    return unsigned_int_accessor(m_data,dtype());
+    return unsigned_int_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
 unsigned_long_accessor
 Node::as_unsigned_long_accessor() const
 {
-    return unsigned_long_accessor(m_data,dtype());
+    return unsigned_long_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
@@ -16965,7 +16979,7 @@ Node::as_unsigned_long_accessor() const
 unsigned_long_long_accessor
 Node::as_unsigned_long_long_accessor() const
 {
-    return unsigned_long_long_accessor(m_data,dtype());
+    return unsigned_long_long_accessor(metall::to_raw_pointer(m_data),dtype());
 
 }
 //---------------------------------------------------------------------------//
@@ -16981,14 +16995,14 @@ Node::as_unsigned_long_long_accessor() const
 float_accessor
 Node::as_float_accessor() const
 {
-    return float_accessor(m_data,dtype());
+    return float_accessor(metall::to_raw_pointer(m_data),dtype());
 }
 
 //---------------------------------------------------------------------------//
 double_accessor
 Node::as_double_accessor() const
 {
-    return double_accessor(m_data,dtype());
+    return double_accessor(metall::to_raw_pointer(m_data),dtype());
 
 }
 //---------------------------------------------------------------------------//
@@ -17004,6 +17018,11 @@ Node::as_long_double_accessor() const
 #endif
 //---------------------------------------------------------------------------//
 
+Node::allocator_type
+Node::get_allocator()
+{
+    return m_allocator;
+}
 
 //-----------------------------------------------------------------------------
 //
@@ -17026,8 +17045,8 @@ Node::set_schema_ptr(Schema *schema_ptr)
     // if(m_schema->is_root())
     if(m_owns_schema)
     {
-        delete m_schema;
-        m_owns_schema = false;
+      deallocate<Schema>(m_schema);
+      m_owns_schema = false;
     }
     m_schema = schema_ptr;
 }
@@ -17088,10 +17107,10 @@ class Node::MMap
 
       //----------------------------------------------------------------------
       void *data_ptr() const
-          { return m_data; }
+          { return metall::to_raw_pointer(m_data); }
 
   private:
-      void      *m_data;
+      pointer<void>  m_data;
       int        m_data_size;
 
 #if !defined(CONDUIT_PLATFORM_WINDOWS)
@@ -17131,6 +17150,8 @@ void
 Node::MMap::open(const std::string &path,
                  index_t data_size)
 {
+  assert(false && "Node::MMap::open() not implemented now");
+
     if(m_data != NULL)
     {
         CONDUIT_ERROR("<Node::mmap> mmap already open");
@@ -17209,7 +17230,7 @@ Node::MMap::close()
 
 #if !defined(CONDUIT_PLATFORM_WINDOWS)
 
-    if(munmap(m_data, m_data_size) == -1)
+    if(munmap(metall::to_raw_pointer(m_data), m_data_size) == -1)
     {
         CONDUIT_ERROR("<Node::mmap> failed to unmap mmap.");
     }
@@ -17243,6 +17264,28 @@ Node::MMap::close()
 // -- private methods that help with init, memory allocation, and cleanup --
 //
 //-----------------------------------------------------------------------------
+
+template <typename T, typename ...Args>
+T*
+Node::allocate(Args&&... args) {
+  using AT = typename std::allocator_traits<
+      allocator_type>::template rebind_alloc<T>;
+  AT alloc(m_allocator);
+  auto data = alloc.allocate(1);
+  alloc.construct(data, std::forward<Args>(args)...);
+  return metall::to_raw_pointer(data);
+}
+
+
+template <typename T>
+void
+Node::deallocate(pointer<T> data) {
+  using AT = typename std::allocator_traits<
+      allocator_type>::template rebind_alloc<T>;
+  AT alloc(m_allocator);
+  alloc.destroy(data);
+  alloc.deallocate(data, 1);
+}
 
 //---------------------------------------------------------------------------//
 void
@@ -17281,7 +17324,9 @@ Node::allocate(const DataType &dtype)
 void
 Node::allocate(index_t dsize)
 {
-    m_data = utils::conduit_allocate((size_t)dsize, (size_t)1, m_allocator_id);
+    // TODO: brush up
+    std::allocator_traits<allocator_type>::rebind_alloc<char> alloc(m_allocator);
+    m_data = alloc.allocate(dsize);
     //  calloc((size_t)dsize,(size_t)1);
     m_data_size = dsize;
     m_alloced   = true;
@@ -17293,7 +17338,7 @@ Node::allocate(index_t dsize)
 void
 Node::mmap(const std::string &stream_path, index_t data_size)
 {
-    m_mmap = new MMap();
+    m_mmap = allocate<MMap>();
     m_mmap->open(stream_path,data_size);
     m_data = m_mmap->data_ptr();
     m_data_size = data_size;
@@ -17309,8 +17354,8 @@ Node::release()
     // delete all children
     for (size_t i = 0; i < m_children.size(); i++)
     {
-        Node* node = m_children[i];
-        delete node;
+        auto node = m_children[i];
+        deallocate<Node>(node);
     }
     m_children.clear();
 
@@ -17323,7 +17368,7 @@ Node::release()
         if(dtype().id() != DataType::EMPTY_ID)
         {
             // clean up our storage
-            utils::conduit_free(m_data, m_allocator_id);
+            m_allocator.deallocate(m_data, m_data_size);
             m_data = NULL;
             m_data_size = 0;
             m_alloced   = false;
@@ -17331,7 +17376,10 @@ Node::release()
     }
     else if(m_mmaped && m_mmap)
     {
-        delete m_mmap;
+        using AT = typename std::allocator_traits<
+            allocator_type>::template rebind_alloc<MMap>;
+        AT alloc(m_allocator);
+        alloc.destroy(m_mmap);
         m_data = NULL;
         m_data_size = 0;
         m_mmaped    = false;
@@ -17347,7 +17395,7 @@ Node::cleanup()
     // if(m_schema->is_root())
     if(m_owns_schema && m_schema != NULL)
     {
-        delete m_schema;
+      deallocate<Schema>(m_schema);
     }
 
     m_schema = NULL;
@@ -17383,8 +17431,7 @@ Node::init_defaults()
 
     m_mmaped    = false;
     m_mmap      = NULL;
-
-    m_schema = new Schema(DataType::EMPTY_ID);
+    m_schema = allocate<Schema>(DataType::EMPTY_ID, m_allocator);
     m_owns_schema = true;
 
     m_parent = NULL;
@@ -17456,7 +17503,8 @@ void
 Node::walk_schema(Node    *node,
                   Schema  *schema,
                   void    *data,
-                  index_t allocator_id)
+                  index_t allocator_id,
+                  allocator_type& allocator)
 {
     // we can have an object, list, or leaf
     node->set_data_ptr(data);
@@ -17467,11 +17515,11 @@ Node::walk_schema(Node    *node,
 
             std::string curr_name = schema->object_order()[i];
             Schema *curr_schema   = &schema->add_child(curr_name);
-            Node *curr_node = new Node();
+            Node *curr_node = node->allocate<Node>(allocator);
             curr_node->set_allocator(allocator_id);
             curr_node->set_schema_ptr(curr_schema);
             curr_node->set_parent(node);
-            walk_schema(curr_node,curr_schema,data,allocator_id);
+            walk_schema(curr_node,curr_schema,data,allocator_id,allocator);
             node->append_node_ptr(curr_node);
         }
     }
@@ -17481,11 +17529,11 @@ Node::walk_schema(Node    *node,
         for(index_t i=0;i<num_entries;i++)
         {
             Schema *curr_schema = schema->child_ptr(i);
-            Node *curr_node = new Node();
+            Node *curr_node = node->allocate<Node>(allocator);
             curr_node->set_allocator(allocator_id);
             curr_node->set_schema_ptr(curr_schema);
             curr_node->set_parent(node);
-            walk_schema(curr_node,curr_schema,data,allocator_id);
+            walk_schema(curr_node,curr_schema,data,allocator_id,allocator);
             node->append_node_ptr(curr_node);
         }
     }
@@ -17497,10 +17545,11 @@ Node::walk_schema(Node    *node,
 void
 Node::mirror_node(Node   *node,
                   Schema *schema,
-                  const Node *src)
+                  const Node *src,
+                  allocator_type& allocator)
 {
     // we can have an object, list, or leaf
-    node->set_data_ptr(src->m_data);
+    node->set_data_ptr(metall::to_raw_pointer(src->m_data));
 
     if(schema->dtype().id() == DataType::OBJECT_ID)
     {
@@ -17509,12 +17558,12 @@ Node::mirror_node(Node   *node,
 
             std::string curr_name = schema->object_order()[i];
             Schema *curr_schema   = &schema->add_child(curr_name);
-            Node *curr_node = new Node();
+            Node *curr_node = node->allocate<Node>(allocator);
             const Node *curr_src = src->child_ptr(i);
             curr_node->set_allocator(node->allocator());
             curr_node->set_schema_ptr(curr_schema);
             curr_node->set_parent(node);
-            mirror_node(curr_node,curr_schema,curr_src);
+            mirror_node(curr_node,curr_schema,curr_src,allocator);
             node->append_node_ptr(curr_node);
         }
     }
@@ -17524,12 +17573,12 @@ Node::mirror_node(Node   *node,
         for(index_t i=0;i<num_entries;i++)
         {
             Schema *curr_schema = schema->child_ptr(i);
-            Node *curr_node = new Node();
+            Node *curr_node = node->allocate<Node>(allocator);
             const Node *curr_src = src->child_ptr(i);
             curr_node->set_allocator(node->allocator());
             curr_node->set_schema_ptr(curr_schema);
             curr_node->set_parent(node);
-            mirror_node(curr_node,curr_schema,curr_src);
+            mirror_node(curr_node,curr_schema,curr_src,allocator);
             node->append_node_ptr(curr_node);
         }
     }
@@ -17553,8 +17602,7 @@ Node::compact_to(uint8 *data, index_t curr_offset) const
     if(dtype_id == DataType::OBJECT_ID ||
        dtype_id == DataType::LIST_ID)
     {
-            std::vector<Node*>::const_iterator itr;
-            for(itr = m_children.begin(); itr < m_children.end(); ++itr)
+            for(auto itr = m_children.cbegin(); itr < m_children.cend(); ++itr)
             {
                 (*itr)->compact_to(data,curr_offset);
                 curr_offset +=  (*itr)->total_bytes_compact();
@@ -17609,8 +17657,7 @@ Node::serialize(uint8 *data,index_t curr_offset) const
     if(dtype().id() == DataType::OBJECT_ID ||
        dtype().id() == DataType::LIST_ID)
     {
-        std::vector<Node*>::const_iterator itr;
-        for(itr = m_children.begin(); itr < m_children.end(); ++itr)
+        for(auto itr = m_children.cbegin(); itr < m_children.cend(); ++itr)
         {
             (*itr)->serialize(&data[0],curr_offset);
             curr_offset+=(*itr)->total_strided_bytes();
@@ -17717,9 +17764,8 @@ Node::contiguous_with(uint8 *start_addy, uint8 *&end_addy) const
     if(dtype_id == DataType::OBJECT_ID ||
        dtype_id == DataType::LIST_ID)
     {
-        std::vector<Node*>::const_iterator itr;
-        for(itr = m_children.begin();
-            itr < m_children.end();
+        for(auto itr = m_children.cbegin();
+            itr < m_children.cend();
             ++itr)
         {
             res = (*itr)->contiguous_with(start_addy,
@@ -17811,9 +17857,8 @@ Node::find_first_data_ptr() const
     if(dtype_id == DataType::OBJECT_ID ||
        dtype_id == DataType::LIST_ID)
     {
-        std::vector<Node*>::const_iterator itr;
-        for(itr = m_children.begin();
-            itr < m_children.end() && res == NULL; // stop if found
+        for(auto itr = m_children.cbegin();
+            itr < m_children.cend() && res == NULL; // stop if found
             ++itr)
         {
             // recurse
@@ -18001,8 +18046,8 @@ Node::diff(const Node &n, Node &info, const float64 epsilon, bool relaxint) cons
         {
             // NOTE: Can't use 'value' for characters since type aliasing can
             // confuse the 'char' type on various platforms.
-            char_array t_array((const void*)m_data, dtype());
-            char_array n_array((const void*)n.m_data, n.dtype());
+            char_array t_array((const void*)metall::to_raw_pointer(m_data), dtype());
+            char_array n_array((const void*)metall::to_raw_pointer(n.m_data), n.dtype());
             res |= t_array.diff(n_array, info, epsilon);
         }
         else
@@ -18169,8 +18214,8 @@ Node::diff_compatible(const Node &n, Node &info, const float64 epsilon,
         {
             // NOTE: Can't use 'value' for characters since type aliasing can
             // confuse the 'char' type on various platforms.
-            char_array t_array((const void*)m_data, dtype());
-            char_array n_array((const void*)n.m_data, n.dtype());
+            char_array t_array((const void*)metall::to_raw_pointer(m_data), dtype());
+            char_array n_array((const void*)metall::to_raw_pointer(n.m_data), n.dtype());
             res |= t_array.diff_compatible(n_array, info, epsilon);
         }
         else

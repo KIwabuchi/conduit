@@ -451,7 +451,7 @@ Generator::Parser::string_to_unsigned_long(const char *txt_value)
 }
 
 //---------------------------------------------------------------------------//
-index_t 
+index_t
 Generator::Parser::parse_leaf_dtype_name(const std::string &dtype_name)
 {
     index_t dtype_id = DataType::name_to_id(dtype_name);
@@ -884,7 +884,7 @@ Generator::Parser::JSON::parse_leaf_dtype(const conduit_rapidjson::Value &jvalue
         extract_uint64_member("stride", stride);
 
         // parse element_bytes (override default if passed)
-        extract_uint64_member("element_bytes", ele_size);    
+        extract_uint64_member("element_bytes", ele_size);
     
         // parse endianness (override default if passed)
         index_t endianness = Endianness::DEFAULT_ID;
@@ -1262,7 +1262,8 @@ Generator::Parser::JSON::walk_pure_json_schema(Node *node,
 
             Schema *curr_schema = &schema->add_child(entry_name);
 
-            Node *curr_node = new Node();
+            Node *curr_node = general_construct<Node>(node->get_allocator(),
+                                                      node->get_allocator());
             curr_node->set_schema_ptr(curr_schema);
             curr_node->set_parent(node);
             node->append_node_ptr(curr_node);
@@ -1299,7 +1300,8 @@ Generator::Parser::JSON::walk_pure_json_schema(Node *node,
             {
                 schema->append();
                 Schema *curr_schema = schema->child_ptr(i);
-                Node * curr_node = new Node();
+                Node *curr_node = general_construct<Node>(node->get_allocator(),
+                                                          node->get_allocator());
                 curr_node->set_schema_ptr(curr_schema);
                 curr_node->set_parent(node);
                 node->append_node_ptr(curr_node);
@@ -1383,7 +1385,7 @@ Generator::Parser::JSON::walk_json_schema(Node   *node,
                     else if(jvalue["length"].IsObject() && 
                             jvalue["length"].HasMember("reference"))
                     {
-                        const std::string ref_path = 
+                        const std::string ref_path =
                           jvalue["length"]["reference"].GetString();
                         length = node->fetch(ref_path).to_index_t();
                     }
@@ -1403,7 +1405,8 @@ Generator::Parser::JSON::walk_json_schema(Node   *node,
                 {
                     schema->append();
                     Schema *curr_schema = schema->child_ptr(i);
-                    Node *curr_node = new Node();
+                    Node *curr_node = general_construct<Node>(node->get_allocator(),
+                                                              node->get_allocator());
                     curr_node->set_schema_ptr(curr_schema);
                     curr_node->set_parent(node);
                     node->append_node_ptr(curr_node);
@@ -1491,7 +1494,9 @@ Generator::Parser::JSON::walk_json_schema(Node   *node,
                 }
 
                 Schema *curr_schema = &schema->add_child(entry_name);
-                Node *curr_node = new Node();
+                
+                Node *curr_node = general_construct<Node>(node->get_allocator(),
+                                                          node->get_allocator());
                 curr_node->set_schema_ptr(curr_schema);
                 curr_node->set_parent(node);
                 node->append_node_ptr(curr_node);
@@ -1517,7 +1522,8 @@ Generator::Parser::JSON::walk_json_schema(Node   *node,
         {
             schema->append();
             Schema *curr_schema = schema->child_ptr(i);
-            Node *curr_node = new Node();
+            Node *curr_node = general_construct<Node>(node->get_allocator(),
+                                                          node->get_allocator());
             curr_node->set_schema_ptr(curr_schema);
             curr_node->set_parent(node);
             node->append_node_ptr(curr_node);
@@ -1561,7 +1567,7 @@ Generator::Parser::JSON::walk_json_schema(Node   *node,
 //---------------------------------------------------------------------------//
 // TODO can this be creatively combined with walk_json_schema? The functions
 // are nearly identical
-void 
+void
 Generator::Parser::JSON::walk_json_schema_external(Node   *node,
                                                    Schema *schema,
                                                    void   *data,
@@ -1608,7 +1614,8 @@ Generator::Parser::JSON::walk_json_schema_external(Node   *node,
                 {
                     schema->append();
                     Schema *curr_schema = schema->child_ptr(i);
-                    Node *curr_node = new Node();
+                    Node *curr_node = general_construct<Node>(node->get_allocator(),
+                                                          node->get_allocator());
                     curr_node->set_schema_ptr(curr_schema);
                     curr_node->set_parent(node);
                     node->append_node_ptr(curr_node);
@@ -1688,7 +1695,8 @@ Generator::Parser::JSON::walk_json_schema_external(Node   *node,
 
                 Schema *curr_schema = &schema->add_child(entry_name);
                 
-                Node *curr_node = new Node();
+                Node *curr_node = general_construct<Node>(node->get_allocator(),
+                                                          node->get_allocator());
                 curr_node->set_schema_ptr(curr_schema);
                 curr_node->set_parent(node);
                 node->append_node_ptr(curr_node);
@@ -1714,7 +1722,8 @@ Generator::Parser::JSON::walk_json_schema_external(Node   *node,
         {
             schema->append();
             Schema *curr_schema = schema->child_ptr(i);
-            Node *curr_node = new Node();
+            Node *curr_node = general_construct<Node>(node->get_allocator(),
+                                                          node->get_allocator());
             curr_node->set_schema_ptr(curr_schema);
             curr_node->set_parent(node);
             node->append_node_ptr(curr_node);
@@ -1980,7 +1989,7 @@ Generator::Parser::YAML::check_yaml_is_number(const yaml_node_t *yaml_node)
 }
 
 //---------------------------------------------------------------------------//
-bool 
+bool
 Generator::Parser::YAML::check_yaml_is_int(const yaml_node_t *yaml_node)
 {
     if (check_yaml_is_scalar_node(yaml_node))
@@ -2005,21 +2014,21 @@ Generator::Parser::YAML::get_yaml_unsigned_long(const yaml_node_t *yaml_node)
 }
 
 //---------------------------------------------------------------------------//
-bool 
+bool
 Generator::Parser::YAML::check_yaml_is_scalar_node(const yaml_node_t *yaml_node)
 {
     return yaml_node->type == YAML_SCALAR_NODE;
 }
 
 //---------------------------------------------------------------------------//
-bool 
+bool
 Generator::Parser::YAML::check_yaml_is_sequence(const yaml_node_t *yaml_node)
 {
     return yaml_node->type == YAML_SEQUENCE_NODE;
 }
 
 //---------------------------------------------------------------------------//
-bool 
+bool
 Generator::Parser::YAML::check_yaml_is_mapping_node(const yaml_node_t *yaml_node)
 {
     return yaml_node->type == YAML_MAPPING_NODE;
@@ -2072,7 +2081,7 @@ Generator::Parser::YAML::fetch_yaml_node_from_object_by_name(yaml_document_t *ya
         CONDUIT_ASSERT(yaml_pair, "YAML Generator error:\nfailed to fetch mapping pair.");
         yaml_node_t *yaml_key = yaml_document_get_node(yaml_doc, yaml_pair->key);
         CONDUIT_ASSERT(yaml_key, "YAML Generator error:\nfailed to fetch mapping key.");
-        CONDUIT_ASSERT(check_yaml_is_scalar_node(yaml_key), 
+        CONDUIT_ASSERT(check_yaml_is_scalar_node(yaml_key),
                        "YAML Generator error:\nInvalid mapping key type.");
         const std::string entry_name(get_yaml_string(yaml_key));
         if (entry_name == member_name)
@@ -2103,7 +2112,7 @@ Generator::Parser::YAML::parse_inline_value(yaml_document_t *yaml_doc,
                                                                    seq_size);
 
         CONDUIT_ASSERT((node.dtype().number_of_elements() >= get_yaml_sequence_length(yaml_node)),
-                       "YAML Generator error:\n" 
+                       "YAML Generator error:\n"
                         << "number of elements in YAML array is more"
                         << "than dtype can hold");
 
@@ -2111,7 +2120,7 @@ Generator::Parser::YAML::parse_inline_value(yaml_document_t *yaml_doc,
         {
             if (node.dtype().is_unsigned_integer())
             {
-                // TODO: we can make this more efficient 
+                // TODO: we can make this more efficient
                 std::vector<uint64> vals;
                 parse_yaml_array<uint64>(yaml_doc, yaml_node, vals, seq_size);
                 switch (node.dtype().id())
@@ -2127,7 +2136,7 @@ Generator::Parser::YAML::parse_inline_value(yaml_document_t *yaml_doc,
                         break;
                     case DataType::UINT64_ID:
                         node.as_uint64_array().set(vals);
-                        break;  
+                        break;
                     default:
                         CONDUIT_ERROR("YAML Generator error:\n"
                                        << "attempting to set non-numeric Node with"
@@ -2137,7 +2146,7 @@ Generator::Parser::YAML::parse_inline_value(yaml_document_t *yaml_doc,
             }
             else
             {
-                // TODO: we can make this more efficient 
+                // TODO: we can make this more efficient
                 std::vector<int64> vals;
                 parse_yaml_array<int64>(yaml_doc, yaml_node, vals, seq_size);
                 switch (node.dtype().id())
@@ -2164,7 +2173,7 @@ Generator::Parser::YAML::parse_inline_value(yaml_document_t *yaml_doc,
         }
         else if(hval_type == DataType::FLOAT64_ID)
         {
-            // TODO: we can make this more efficient 
+            // TODO: we can make this more efficient
             std::vector<float64> vals;
             parse_yaml_array<float64>(yaml_doc, yaml_node, vals, seq_size);
             switch (node.dtype().id())
@@ -2241,7 +2250,7 @@ Generator::Parser::YAML::parse_yaml_array(yaml_document_t *yaml_doc,
     for (index_t cld_idx = 0; cld_idx < seq_size; cld_idx ++)
     {
         yaml_node_t *yaml_child = fetch_yaml_node_from_list(yaml_doc, yaml_node, cld_idx);
-        CONDUIT_ASSERT(yaml_child && check_yaml_is_scalar_node(yaml_child), 
+        CONDUIT_ASSERT(yaml_child && check_yaml_is_scalar_node(yaml_child),
                        "YAML Generator error:\nInvalid array value.");
         const char *yaml_value_str = get_yaml_string(yaml_child);
         if (std::is_same<T, int64>::value)
@@ -2275,7 +2284,7 @@ Generator::Parser::YAML::parse_yaml_array(yaml_document_t *yaml_doc,
     for (index_t cld_idx = 0; cld_idx < seq_size; cld_idx ++)
     {
         yaml_node_t *yaml_child = fetch_yaml_node_from_list(yaml_doc, yaml_node, cld_idx);
-        CONDUIT_ASSERT(yaml_child && check_yaml_is_scalar_node(yaml_child), 
+        CONDUIT_ASSERT(yaml_child && check_yaml_is_scalar_node(yaml_child),
                        "YAML Generator error:\nInvalid array value.");
         const char *yaml_value_str = get_yaml_string(yaml_child);
         if (std::is_same<T, int64>::value)
@@ -2363,10 +2372,10 @@ Generator::Parser::YAML::parse_inline_leaf(const char *yaml_txt,
         switch(node.dtype().id())
         {
             // signed ints
-            case DataType::INT8_ID:   
+            case DataType::INT8_ID:
                 node.set(static_cast<int8>(string_to_long(yaml_txt)));
                 break;
-            case DataType::INT16_ID: 
+            case DataType::INT16_ID:
                 node.set(static_cast<int16>(string_to_long(yaml_txt)));
                 break;
             case DataType::INT32_ID:
@@ -2387,7 +2396,7 @@ Generator::Parser::YAML::parse_inline_leaf(const char *yaml_txt,
                 break;
             case DataType::UINT64_ID:
                 node.set(static_cast<uint64>(string_to_unsigned_long(yaml_txt)));
-                break;  
+                break;
             //floats
             case DataType::FLOAT32_ID:
                 node.set(static_cast<float32>(string_to_double(yaml_txt)));
@@ -2476,7 +2485,7 @@ Generator::Parser::YAML::parse_leaf_dtype(yaml_document_t *yaml_doc,
     else if (check_yaml_is_mapping_node(yaml_node))
     {
         yaml_node_t* dtype_node = fetch_yaml_node_from_object_by_name(yaml_doc, yaml_node, "dtype");
-        CONDUIT_ASSERT(dtype_node && check_yaml_is_scalar_node(dtype_node), 
+        CONDUIT_ASSERT(dtype_node && check_yaml_is_scalar_node(dtype_node),
                        "YAML Generator error:\n'dtype' must be a YAML string.")
         const std::string dtype_name(get_yaml_string(dtype_node));
 
@@ -2601,7 +2610,7 @@ Generator::Parser::YAML::parse_leaf_dtype(yaml_document_t *yaml_doc,
 
 
 //---------------------------------------------------------------------------//
-void 
+void
 Generator::Parser::YAML::walk_yaml_schema(Node *node,
                                           Schema *schema,
                                           void *data,
@@ -2634,7 +2643,7 @@ Generator::Parser::YAML::walk_yaml_schema(Node *node,
 
 
 //---------------------------------------------------------------------------//
-void 
+void
 Generator::Parser::YAML::walk_yaml_schema(Node *node,
                                           Schema *schema,
                                           void *data,
@@ -2777,7 +2786,7 @@ Generator::Parser::YAML::walk_yaml_schema(Node *node,
                 CONDUIT_ASSERT(yaml_pair, "YAML Generator error:\nfailed to fetch mapping pair.");
                 yaml_node_t *yaml_key = yaml_document_get_node(yaml_doc, yaml_pair->key);
                 CONDUIT_ASSERT(yaml_key, "YAML Generator error:\nfailed to fetch mapping key.");
-                CONDUIT_ASSERT(check_yaml_is_scalar_node(yaml_key), 
+                CONDUIT_ASSERT(check_yaml_is_scalar_node(yaml_key),
                                "YAML Generator error:\nInvalid mapping key type.");
                 const std::string entry_name(get_yaml_string(yaml_key));
 
@@ -2786,7 +2795,7 @@ Generator::Parser::YAML::walk_yaml_schema(Node *node,
                 //   always use first instance, or always use last instance
                 // however duplicate object names are most likely a
                 // typo, so it's best to throw an error
-                // 
+                //
                 // also its highly unlikely that the auto offset case
                 // could safely deal with offsets for the
                 // duplicate key case
@@ -2878,7 +2887,7 @@ Generator::Parser::YAML::walk_yaml_schema(Node *node,
 
 
 //---------------------------------------------------------------------------//
-void 
+void
 Generator::Parser::YAML::walk_yaml_schema(Schema *schema,
                                           const char *yaml_txt,
                                           index_t curr_offset)
@@ -2905,7 +2914,7 @@ Generator::Parser::YAML::walk_yaml_schema(Schema *schema,
 
 
 //---------------------------------------------------------------------------//
-void 
+void
 Generator::Parser::YAML::walk_yaml_schema(Schema *schema,
                                           yaml_document_t *yaml_doc,
                                           const yaml_node_t *yaml_node,
@@ -2980,7 +2989,7 @@ Generator::Parser::YAML::walk_yaml_schema(Schema *schema,
                 CONDUIT_ASSERT(yaml_pair, "YAML Generator error:\nfailed to fetch mapping pair.");
                 yaml_node_t *yaml_key = yaml_document_get_node(yaml_doc, yaml_pair->key);
                 CONDUIT_ASSERT(yaml_key, "YAML Generator error:\nfailed to fetch mapping key.");
-                CONDUIT_ASSERT(check_yaml_is_scalar_node(yaml_key), 
+                CONDUIT_ASSERT(check_yaml_is_scalar_node(yaml_key),
                                "YAML Generator error:\nInvalid mapping key type.");
                 const std::string entry_name(get_yaml_string(yaml_key));
 
@@ -3092,7 +3101,7 @@ Generator::Parser::YAML::walk_pure_yaml_schema(Node *node,
             CONDUIT_ASSERT(yaml_pair, "YAML Generator error:\nfailed to fetch mapping pair.");
             yaml_node_t *yaml_key = yaml_document_get_node(yaml_doc, yaml_pair->key);
             CONDUIT_ASSERT(yaml_key, "YAML Generator error:\nfailed to fetch mapping key.");
-            CONDUIT_ASSERT(check_yaml_is_scalar_node(yaml_key), 
+            CONDUIT_ASSERT(check_yaml_is_scalar_node(yaml_key),
                            "YAML Generator error:\nInvalid mapping key type.");
             const std::string entry_name(get_yaml_string(yaml_key));
             yaml_node_t *yaml_child = yaml_document_get_node(yaml_doc, yaml_pair->value);
@@ -3111,11 +3120,12 @@ Generator::Parser::YAML::walk_pure_yaml_schema(Node *node,
 
             Schema *curr_schema = &schema->add_child(entry_name);
 
-            Node *curr_node = new Node();
+            Node *curr_node = general_construct<Node>(node->get_allocator(),
+                                                          node->get_allocator());
             curr_node->set_schema_ptr(curr_schema);
             curr_node->set_parent(node);
             node->append_node_ptr(curr_node);
-            
+
             walk_pure_yaml_schema(curr_node,
                                   curr_schema,
                                   yaml_doc,
@@ -3162,7 +3172,8 @@ Generator::Parser::YAML::walk_pure_yaml_schema(Node *node,
 
                 schema->append();
                 Schema *curr_schema = schema->child_ptr(cld_idx);
-                Node * curr_node = new Node();
+                Node * curr_node = general_construct<Node>(node->get_allocator(),
+                                                          node->get_allocator());
                 curr_node->set_schema_ptr(curr_schema);
                 curr_node->set_parent(node);
                 node->append_node_ptr(curr_node);
@@ -3540,6 +3551,15 @@ Generator::walk_external(Node &node) const
     }
 }
 
+template <typename T, typename AllocatorType, typename... Args>
+T *general_construct(AllocatorType a, Args &&...args) {
+  using AT =
+      typename std::allocator_traits<AllocatorType>::template rebind_alloc<T>;
+  AT alloc(a);
+  auto data = alloc.allocate(1);
+  alloc.construct(data, std::forward<Args>(args)...);
+  return metall::to_raw_pointer(data);
+}
 
 //-----------------------------------------------------------------------------
 // -- end conduit::Generator --

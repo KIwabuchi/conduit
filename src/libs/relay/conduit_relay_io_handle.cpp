@@ -92,9 +92,9 @@ public:
 
     void remove(const std::string &path);
 
-    void list_child_names(std::vector<std::string> &res);
+    void list_child_names(Node::StringVector &res);
     void list_child_names(const std::string &path,
-                          std::vector<std::string> &res);
+                          Node::StringVector &res);
 
     bool has_path(const std::string &path);
 
@@ -143,9 +143,9 @@ public:
 
     void remove(const std::string &path);
 
-    void list_child_names(std::vector<std::string> &res);
+    void list_child_names(Node::StringVector &res);
     void list_child_names(const std::string &path,
-                          std::vector<std::string> &res);
+                          Node::StringVector &res);
 
     bool has_path(const std::string &path);
 
@@ -536,7 +536,7 @@ BasicHandle::write(const Node &node,
 
 //-----------------------------------------------------------------------------
 void
-BasicHandle::list_child_names(std::vector<std::string> &res)
+BasicHandle::list_child_names(Node::StringVector &res)
 {
     // note: wrong mode errors are handled before dispatch to interface
 
@@ -546,7 +546,7 @@ BasicHandle::list_child_names(std::vector<std::string> &res)
 //-----------------------------------------------------------------------------
 void
 BasicHandle::list_child_names(const std::string &path,
-                              std::vector<std::string> &res)
+                              Node::StringVector &res)
 {
     // note: wrong mode errors are handled before dispatch to interface
 
@@ -768,7 +768,7 @@ HDF5Handle::write(const Node &node,
 
 //-----------------------------------------------------------------------------
 void
-HDF5Handle::list_child_names(std::vector<std::string> &res)
+HDF5Handle::list_child_names(Node::StringVector &res)
 {
     // note: wrong mode errors are handled before dispatch to interface
 
@@ -778,7 +778,7 @@ HDF5Handle::list_child_names(std::vector<std::string> &res)
 //-----------------------------------------------------------------------------
 void
 HDF5Handle::list_child_names(const std::string &path,
-                             std::vector<std::string> &res)
+                             Node::StringVector &res)
 {
     // note: wrong mode errors are handled before dispatch to interface
 
@@ -1055,7 +1055,7 @@ IOHandle::remove(const std::string &path)
 
 //-----------------------------------------------------------------------------
 void
-IOHandle::list_child_names(std::vector<std::string> &names)
+IOHandle::list_child_names(Node::StringVector &names)
 {
     names.clear();
     if(m_handle != NULL)
@@ -1079,7 +1079,7 @@ IOHandle::list_child_names(std::vector<std::string> &names)
 //-----------------------------------------------------------------------------
 void
 IOHandle::list_child_names(const std::string &path,
-                           std::vector<std::string> &names)
+                           Node::StringVector &names)
 {
     names.clear();
     if(m_handle != NULL)

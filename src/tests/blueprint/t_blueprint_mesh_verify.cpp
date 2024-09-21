@@ -25,7 +25,7 @@ namespace bputils = conduit::blueprint::mesh::utils;
 
 /// Testing Constants ///
 
-std::vector<std::string> get_log_keywords()
+Node::StringVector get_log_keywords()
 {
     Node log_node;
     log::info(log_node,"","");
@@ -35,7 +35,7 @@ std::vector<std::string> get_log_keywords()
     return log_node.child_names();
 }
 
-const std::vector<std::string> LOG_KEYWORDS = get_log_keywords();
+const auto LOG_KEYWORDS = get_log_keywords();
 const std::vector<std::string> COORDINATE_COORDSYSS[] =
     {bputils::CARTESIAN_AXES, bputils::CYLINDRICAL_AXES, bputils::SPHERICAL_AXES};
 
@@ -370,7 +370,7 @@ TEST(conduit_blueprint_mesh_verify, coordset_rectilinear)
 
     for(size_t ci = 0; ci < 3; ci++)
     {
-        const std::vector<std::string>& coord_coordsys = COORDINATE_COORDSYSS[ci];
+        const auto& coord_coordsys = COORDINATE_COORDSYSS[ci];
 
         n["values"].reset();
         for(size_t cj = 0; cj < coord_coordsys.size(); cj++)
@@ -386,7 +386,7 @@ TEST(conduit_blueprint_mesh_verify, coordset_rectilinear)
     //  don't need to be mcarrays)
     for(size_t ci = 0; ci < 3; ci++)
     {
-        const std::vector<std::string>& coord_coordsys = COORDINATE_COORDSYSS[ci];
+        const auto& coord_coordsys = COORDINATE_COORDSYSS[ci];
 
         n["values"].reset();
         for(size_t cj = 0; cj < coord_coordsys.size(); cj++)
@@ -430,7 +430,7 @@ TEST(conduit_blueprint_mesh_verify, coordset_explicit)
 
     for(size_t ci = 0; ci < 3; ci++)
     {
-        const std::vector<std::string>& coord_coordsys = COORDINATE_COORDSYSS[ci];
+        const auto& coord_coordsys = COORDINATE_COORDSYSS[ci];
 
         n["values"].reset();
         for(size_t cj = 0; cj < coord_coordsys.size(); cj++)
@@ -509,7 +509,7 @@ TEST(conduit_blueprint_mesh_verify, coordset_coordsys)
         CHECK_MESH(verify_coordset_coordsys,n,info,false);
 
         n["axes"].reset();
-        const std::vector<std::string>& coordsys = COORDINATE_COORDSYSS[ci];
+        const auto& coordsys = COORDINATE_COORDSYSS[ci];
         for(size_t ai = 0; ai < coordsys.size(); ai++)
         {
             n["axes"][coordsys[ai]].set(10);

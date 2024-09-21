@@ -20,7 +20,7 @@ using namespace conduit::relay;
 TEST(conduit_relay_io_handle, test_active_protos)
 {
     std::string tfile_base = "tout_conduit_relay_io_handle.";
-    std::vector<std::string> protocols;
+    Node::StringVector protocols;
 
     protocols.push_back("conduit_bin");
     protocols.push_back("json");
@@ -34,7 +34,7 @@ TEST(conduit_relay_io_handle, test_active_protos)
     if(n_about["protocols/hdf5"].as_string() == "enabled")
         protocols.push_back("hdf5");
 
-    for (std::vector<std::string>::const_iterator itr = protocols.begin();
+    for (Node::StringVector::const_iterator itr = protocols.begin();
              itr < protocols.end(); ++itr)
     {
         std::string protocol = *itr;
@@ -55,7 +55,7 @@ TEST(conduit_relay_io_handle, test_active_protos)
         n["c"] = c_val;
         n["d/here"] = here_val;
 
-        std::vector<std::string> cnames;
+        Node::StringVector cnames;
 
         io::IOHandle h;
         h.open(test_file_name);
@@ -163,7 +163,7 @@ TEST(conduit_relay_io_handle, test_is_open)
 // {
 //
 //     std::string tfile_base = "tout_conduit_relay_io_handle_subpath.";
-//     std::vector<std::string> protocols;
+//     Node::StringVector protocols;
 //
 //     protocols.push_back("conduit_bin");
 //     protocols.push_back("conduit_json");
@@ -175,7 +175,7 @@ TEST(conduit_relay_io_handle, test_is_open)
 //     if(n_about["protocols/hdf5"].as_string() == "enabled")
 //         protocols.push_back("hdf5");
 //
-//     for (std::vector<std::string>::const_iterator itr = protocols.begin();
+//     for (Node::StringVector::const_iterator itr = protocols.begin();
 //              itr < protocols.end(); ++itr)
 //     {
 //         std::string protocol = *itr;
@@ -228,7 +228,7 @@ TEST(conduit_relay_io_handle, test_exceptions)
     EXPECT_THROW(h.has_path("here"), conduit::Error);
     EXPECT_THROW(h.remove("here"), conduit::Error);
 
-    std::vector<std::string> cld_names;
+    Node::StringVector cld_names;
     EXPECT_THROW(h.list_child_names(cld_names), conduit::Error);
 
     EXPECT_THROW(h.open("here/is/a/garbage/file/path.json"),
@@ -254,7 +254,7 @@ TEST(conduit_relay_io_handle, test_exceptions)
 //-----------------------------------------------------------------------------
 TEST(conduit_relay_io_handle, leading_slash_reads)
 {
-    std::vector<std::string> protocols;
+    Node::StringVector protocols;
 
     protocols.push_back("conduit_bin");
     protocols.push_back("json");
@@ -272,7 +272,7 @@ TEST(conduit_relay_io_handle, leading_slash_reads)
     n["path/to/some/data"] = "data!";
 
 
-    for (std::vector<std::string>::const_iterator itr = protocols.begin();
+    for (Node::StringVector::const_iterator itr = protocols.begin();
              itr < protocols.end(); ++itr)
     {
 
@@ -328,7 +328,7 @@ TEST(conduit_relay_io_handle, test_mode)
     n["c"] = c_val;
     n["d/here"] = here_val;
 
-    std::vector<std::string> protocols;
+    Node::StringVector protocols;
 
     protocols.push_back("conduit_bin");
     protocols.push_back("json");
@@ -342,7 +342,7 @@ TEST(conduit_relay_io_handle, test_mode)
     if(n_about["protocols/hdf5"].as_string() == "enabled")
         protocols.push_back("hdf5");
 
-    for (std::vector<std::string>::const_iterator itr = protocols.begin();
+    for (Node::StringVector::const_iterator itr = protocols.begin();
              itr < protocols.end(); ++itr)
     {
 
@@ -399,7 +399,7 @@ TEST(conduit_relay_io_handle, test_mode)
         // write only, fail to has_path
         EXPECT_THROW(h_wo.has_path("super"), conduit::Error);
         // write only, fail to list_child_names
-        std::vector<std::string> cld_names;
+        Node::StringVector cld_names;
         EXPECT_THROW(h_wo.list_child_names(cld_names), conduit::Error);
         EXPECT_THROW(h_wo.list_child_names("super",cld_names), conduit::Error);
 

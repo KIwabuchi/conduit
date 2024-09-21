@@ -221,9 +221,9 @@ TEST(schema_basics, schema_child_names)
     s["c"].set(DataType::float64());
     s["d/e"].set(DataType::int64());
     
-    const std::vector<std::string> &cld_names = s.child_names();
+    const auto &cld_names = s.child_names();
     
-    const std::vector<std::string> &sde_names = s["d/e"].child_names();
+    const auto &sde_names = s["d/e"].child_names();
 
     EXPECT_EQ(cld_names[0],std::string("a"));
     EXPECT_EQ(cld_names[1],std::string("b"));
@@ -278,7 +278,7 @@ TEST(schema_basics, rename_child)
     // error, can't rename non existing child
     EXPECT_THROW(s.rename_child("bad","d"),conduit::Error);
 
-    std::vector<std::string> cnames = s.child_names();
+    auto cnames = s.child_names();
     EXPECT_EQ(cnames[2],"c");
     EXPECT_TRUE(s.has_child("c"));
     EXPECT_FALSE(s.has_child("d"));

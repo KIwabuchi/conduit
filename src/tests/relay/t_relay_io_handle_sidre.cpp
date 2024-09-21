@@ -41,7 +41,7 @@ TEST(conduit_relay_io_handle, test_sidre_basic)
     }
 
     std::string tbase = "texample_sidre_basic_ds_demo.";
-    std::vector<std::string> tprotos;
+    Node::StringVector tprotos;
     // sidre hdf5 is the only currently supported protocol
     tprotos.push_back("sidre_hdf5");
 
@@ -88,7 +88,7 @@ TEST(conduit_relay_io_handle, test_sidre_basic)
         h.open(relay_test_data_path(tbase + protocol),
                protocol);
         // check expected child naes
-        std::vector<std::string> rchld;
+        Node::StringVector rchld;
         h.list_child_names(rchld);
 
         // print names
@@ -155,7 +155,7 @@ TEST(conduit_relay_io_handle, test_sidre_with_root)
     h.open(relay_test_data_path("out_spio_blueprint_example.root"),
            "sidre_hdf5");
 
-    std::vector<std::string> rchld;
+    Node::StringVector rchld;
     h.list_child_names(rchld);
     EXPECT_TRUE(rchld.size() > 0 );
 
@@ -196,7 +196,7 @@ TEST(conduit_relay_io_handle, test_sidre_with_root)
     EXPECT_FALSE(h.has_path("0/nesh"));
 
     // list child_names test
-    std::vector<std::string> tchld;
+    Node::StringVector tchld;
     h.list_child_names("root",tchld);
     EXPECT_TRUE(tchld.size() > 0 );
     

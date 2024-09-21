@@ -474,7 +474,7 @@ void check_for_attributes(const conduit::Node &input,
     if(dom.has_path("fields"))
     {
       const conduit::Node &fields = dom["fields"];
-      std::vector<std::string> fnames = fields.child_names();
+      auto fnames = fields.child_names();
       for(size_t i = 0; i < fnames.size(); ++i)
       {
         if(fnames[i].find("_attribute") != std::string::npos)

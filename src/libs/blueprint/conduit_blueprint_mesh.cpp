@@ -6318,8 +6318,8 @@ mesh::matset::verify(const Node &matset,
             else if(matset["element_ids"].dtype().is_object() &&
                 matset["volume_fractions"].dtype().is_object())
             {
-                const std::vector<std::string> &vf_mats = matset["volume_fractions"].child_names();
-                const std::vector<std::string> &eid_mats = matset["element_ids"].child_names();
+                const auto &vf_mats = matset["volume_fractions"].child_names();
+                const auto &eid_mats = matset["element_ids"].child_names();
                 const std::set<std::string> vf_matset(vf_mats.begin(), vf_mats.end());
                 const std::set<std::string> eid_matset(eid_mats.begin(), eid_mats.end());
                 if(vf_matset != eid_matset)
@@ -6870,13 +6870,13 @@ mesh::adjset::to_pairwise(const Node &adjset,
     // NOTE(JRC): We assume that group names are shared across ranks, but
     // make no assumptions on the uniqueness of a set of neighbors for a group
     // (i.e. the same set of neighbors can be used in >1 groups).
-    std::vector<std::string> adjset_group_names = adjset["groups"].child_names();
+    auto adjset_group_names = adjset["groups"].child_names();
     std::sort(adjset_group_names.begin(), adjset_group_names.end());
 
     // Compile ordered lists for each neighbor containing their unique lists
     // of 'adjset' entity indices, as compiled from all groups in the source 'adjset'.
     std::map<index_t, std::vector<index_t>> pair_values_map;
-    for(const std::string &group_name : adjset_group_names)
+    for(const auto &group_name : adjset_group_names)
     {
         const Node &group_node = adjset["groups"][group_name];
 
@@ -6952,11 +6952,11 @@ mesh::adjset::to_maxshare(const Node &adjset,
     // NOTE(JRC): We assume that group names are shared across ranks, but
     // make no assumptions on the uniqueness of a set of neighbors for a group
     // (i.e. the same set of neighbors can be used in >1 groups).
-    std::vector<std::string> adjset_group_names = adjset["groups"].child_names();
+    auto adjset_group_names = adjset["groups"].child_names();
     std::sort(adjset_group_names.begin(), adjset_group_names.end());
 
     std::map<index_t, std::set<index_t>> entity_groupset_map;
-    for(const std::string &group_name : adjset_group_names)
+    for(const auto &group_name : adjset_group_names)
     {
         const Node &group_node = adjset["groups"][group_name];
 

@@ -379,13 +379,13 @@ bool verify(const conduit::Node &n,
     for(index_t curr_depth = 0; curr_depth < node_max_depth; curr_depth++)
     {
         const NodeVector &depth_nodes = nodes_by_depth[(size_t)curr_depth];
-        std::vector<std::string> depth_children = depth_nodes[0]->child_names();
+        auto depth_children = depth_nodes[0]->child_names();
         std::set<std::string> depth_childset(depth_children.begin(), depth_children.end());
 
         for(index_t node_idx = 0; node_idx < (index_t)depth_nodes.size() && res; node_idx++)
         {
             const conduit::Node* curr_node = depth_nodes[(size_t)node_idx];
-            const std::vector<std::string> curr_children = curr_node->child_names();
+            const auto curr_children = curr_node->child_names();
             std::set<std::string> curr_childset(curr_children.begin(), curr_children.end());
 
             if(curr_childset != depth_childset)
