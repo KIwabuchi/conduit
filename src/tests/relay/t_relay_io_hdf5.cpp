@@ -1581,7 +1581,7 @@ TEST(conduit_relay_io_hdf5, conduit_hdf5_group_list_children)
     EXPECT_TRUE(utils::is_file(tout));
 
     hid_t h5_file_id = io::hdf5_open_file_for_read(tout);
-    std::vector<std::string> cnames;
+    Node::StringVector cnames;
 
     io::hdf5_group_list_child_names(h5_file_id,"/",cnames);
 

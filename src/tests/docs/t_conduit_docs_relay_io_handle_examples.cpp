@@ -78,12 +78,12 @@ TEST(conduit_docs, relay_io_handle_1)
     h.write(n,"a/c");
 
     // find the names of the children of "a"
-    std::vector<std::string> cld_names;
+    Node::StringVector cld_names;
     h.list_child_names("a",cld_names);
 
     // print the names
     std::cout << "\nChildren of \"a\": ";
-    std::vector<std::string>::const_iterator itr;
+    Node::StringVector::const_iterator itr;
     for (itr = cld_names.begin();
          itr < cld_names.end();
          ++itr)
@@ -127,12 +127,12 @@ TEST(conduit_docs, relay_io_handle_sidre_1)
     h.open(input_fname,"sidre_hdf5");
 
     // find the names of the children at the root
-    std::vector<std::string> cld_names;
+    Node::StringVector cld_names;
     h.list_child_names(cld_names);
     
     // print the names
     std::cout << "\nChildren at root: ";
-    std::vector<std::string>::const_iterator itr;
+    Node::StringVector::const_iterator itr;
     for (itr = cld_names.begin();
          itr < cld_names.end();
          ++itr)
@@ -174,7 +174,7 @@ TEST(conduit_docs, relay_io_handle_sidre_2)
     h.open(input_fname,"sidre_hdf5");
 
     // find the names of the children at the root
-    std::vector<std::string> cld_names;
+    Node::StringVector cld_names;
     h.list_child_names(cld_names);
 
     // the "root" (/) of the Sidre-based IOHandle to the datastore provides
@@ -182,7 +182,7 @@ TEST(conduit_docs, relay_io_handle_sidre_2)
 
     // print the names
     std::cout << "\nChildren at root: ";
-    std::vector<std::string>::const_iterator itr;
+    Node::StringVector::const_iterator itr;
     for (itr = cld_names.begin();
          itr < cld_names.end();
          ++itr)

@@ -4065,7 +4065,7 @@ is_hdf5_file(const std::string &file_path)
 //---------------------------------------------------------------------------//
 void hdf5_group_list_child_names(hid_t hdf5_id,
                                  const std::string &hdf5_path,
-                                 std::vector<std::string> &res)
+                                 Node::StringVector &res)
 {
     // disable hdf5 error stack
     HDF5ErrorStackSupressor supress_hdf5_errors;
@@ -4179,7 +4179,7 @@ void hdf5_group_list_child_names(hid_t hdf5_id,
                                        name_size,
                                        H5P_DEFAULT);
 
-        res.push_back(std::string(name_buff_ptr));
+        res.emplace_back(name_buff_ptr);
 
         if(name_buff_tmp)
         {

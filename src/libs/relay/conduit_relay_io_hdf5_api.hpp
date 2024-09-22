@@ -432,7 +432,7 @@ bool CONDUIT_RELAY_API is_hdf5_file(const std::string &path);
 //-----------------------------------------------------------------------------
 void CONDUIT_RELAY_API hdf5_group_list_child_names(hid_t hdf5_id,
                                                  const std::string &path,
-                                                 std::vector<std::string> &res);
+                                                 Node::StringVector &res);
 
 //-----------------------------------------------------------------------------
 /// Check if path exists relative to hdf5 id
