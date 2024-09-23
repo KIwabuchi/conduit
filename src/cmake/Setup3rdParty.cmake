@@ -202,31 +202,13 @@ if(TOTALVIEW_DIR)
     endif()
 endif()
 
-include(FetchContent)
-
+################################
+# Setup Metall
+################################
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.26.0")
     cmake_policy(SET CMP0167 NEW)
 endif()
-# Boost header files are required for using Metall.
-find_package(Boost 1.64)
-# Download Boost if it does not exit.
-# NOTE: this process may take a long time as Boost is a big repository.
-if (NOT Boost_FOUND)
-    message(STATUS "Download or search previously downloaded Boost using FetchContent")
-    FetchContent_Declare(Boost
-            URL https://boostorg.jfrog.io/artifactory/main/release/1.78.0/source/boost_1_78_0.tar.bz2)
-    FetchContent_GetProperties(Boost)
-    if (NOT Boost_POPULATED)
-        FetchContent_Populate(Boost)
-    endif ()
-    set(Boost_INCLUDE_DIRS ${boost_SOURCE_DIR})
-endif ()
-include_directories(${Boost_INCLUDE_DIRS})
 
-FetchContent_Declare(
-        Metall
-        GIT_REPOSITORY https://github.com/LLNL/metall.git
-        GIT_TAG master
-)
-FetchContent_MakeAvailable(Metall)
+find_package(Boost 1.64 REQUIRED)
+find_package(Metall REQUIRED)
 link_libraries(Metall::Metall)
