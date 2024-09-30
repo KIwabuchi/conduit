@@ -209,6 +209,11 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.26.0")
     cmake_policy(SET CMP0167 NEW)
 endif()
 
-find_package(Boost 1.64 REQUIRED)
-find_package(Metall REQUIRED)
+# FIXME: need to clean up this logic
+# The paths of Metall and boost are directly specified to compiler and linker somehow when conduit is installed by spack.
+# So, it is okay even if Metall or Boost is not found by find_package.
+find_package(Boost 1.64)
+include_directories(${Boost_INCLUDE_DIRS}) # Maybe this is not necessary
+
+find_package(Metall)
 link_libraries(Metall::Metall)
