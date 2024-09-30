@@ -213,7 +213,11 @@ endif()
 # The paths of Metall and boost are directly specified to compiler and linker somehow when conduit is installed by spack.
 # So, it is okay even if Metall or Boost is not found by find_package.
 find_package(Boost 1.64)
-include_directories(${Boost_INCLUDE_DIRS}) # Maybe this is not necessary
+if (Boost_FOUND)
+    include_directories(${Boost_INCLUDE_DIRS}) # Maybe this is not necessary
+endif ()
 
 find_package(Metall)
-link_libraries(Metall::Metall)
+if (Metall_FOUND)
+    link_libraries(Metall::Metall)
+endif ()
