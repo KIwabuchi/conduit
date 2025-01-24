@@ -10,12 +10,12 @@
 #include "conduit_schema.hpp"
 
 //-----------------------------------------------------------------------------
-// -- standard lib includes -- 
+// -- standard lib includes --
 //-----------------------------------------------------------------------------
 #include <stdio.h>
 
 //-----------------------------------------------------------------------------
-// -- conduit includes -- 
+// -- conduit includes --
 //-----------------------------------------------------------------------------
 #include "conduit_generator.hpp"
 #include "conduit_error.hpp"
@@ -65,8 +65,11 @@ Schema::Schema(const Schema &schema)
 Schema::Schema(index_t dtype_id, const allocator_type& allocator)
 : m_allocator(allocator)
 {
+    std::cerr << __FILE__ << " " << __LINE__ << std::endl;
     init_defaults();
+    std::cerr << __FILE__ << " " << __LINE__ << std::endl;
     set(dtype_id);
+    std::cerr << __FILE__ << " " << __LINE__ << std::endl;
 }
 
 //---------------------------------------------------------------------------//
@@ -113,14 +116,17 @@ Schema::reset()
 //-----------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------//
-void 
+void
 Schema::set(const Schema &schema)
 {
+    std::cerr << __FILE__ << " " << __LINE__ << std::endl;
     reset();
     m_allocator = schema.m_allocator;
+    std::cerr << __FILE__ << " " << __LINE__ << std::endl;
 
     bool init_children = false;
     index_t dt_id = schema.m_dtype.id();
+    std::cerr << __FILE__ << " " << __LINE__ << std::endl;
     if (dt_id == DataType::OBJECT_ID)
     {
        init_object();
@@ -128,34 +134,35 @@ Schema::set(const Schema &schema)
 
        object_map()   = schema.object_map();
        object_order() = schema.object_order();
-    } 
+    }
     else if (dt_id == DataType::LIST_ID)
     {
        init_list();
        init_children = true;
     }
-    else 
+    else
     {
         m_dtype = schema.m_dtype;
     }
+    std::cerr << __FILE__ << " " << __LINE__ << std::endl;
 
-    
-    if (init_children) 
+    if (init_children)
     {
        Schema::schema_vector_type &my_children = children();
        const Schema::schema_vector_type &their_children = schema.children();
-       for (size_t i = 0; i < their_children.size(); i++) 
+       for (size_t i = 0; i < their_children.size(); i++)
        {
            Schema *child_schema = allocate<Schema>(*their_children[i]);
            child_schema->m_parent = this;
            my_children.push_back(child_schema);
        }
     }
+    std::cerr << __FILE__ << " " << __LINE__ << std::endl;
 }
 
 
 //---------------------------------------------------------------------------//
-void 
+void
 Schema::set(index_t dtype_id)
 {
     reset();
@@ -165,7 +172,7 @@ Schema::set(index_t dtype_id)
 
 
 //---------------------------------------------------------------------------//
-void 
+void
 Schema::set(const DataType &dtype)
 {
     reset();
@@ -178,7 +185,7 @@ Schema::set(const DataType &dtype)
 }
 
 //---------------------------------------------------------------------------//
-void 
+void
 Schema::set(const std::string &json_schema)
 {
     reset();
@@ -290,7 +297,7 @@ Schema::spanned_bytes() const
         for (Schema::schema_vector_type::const_iterator itr = lst.begin();
              itr < lst.end(); ++itr)
         {
-            // spanned bytes is the max of the spanned bytes of 
+            // spanned bytes is the max of the spanned bytes of
             // all children
             index_t curr_span = (*itr)->spanned_bytes();
             if(curr_span > res)
@@ -316,13 +323,13 @@ Schema::compatible(const Schema &s) const
 
     if(dt_id != s_dt_id)
         return false;
-    
+
     bool res = true;
-    
+
     if(dt_id == DataType::OBJECT_ID)
     {
         // each of s's entries that match paths must have dtypes that match
-        
+
         for(auto loc  = s.object_map().begin();
             loc != s.object_map().end() && res;
             loc++)
@@ -339,11 +346,11 @@ Schema::compatible(const Schema &s) const
             }
         }
     }
-    else if(dt_id == DataType::LIST_ID) 
+    else if(dt_id == DataType::LIST_ID)
     {
         // each of s's entries dtypes must match
         index_t s_n_chd = s.number_of_children();
-        
+
         // can't be compatible in this case
         if(number_of_children() < s_n_chd)
             return false;
@@ -372,9 +379,9 @@ Schema::equals(const Schema &s) const
 
     if(dt_id != s_dt_id)
         return false;
-    
+
     bool res = true;
-    
+
     if(dt_id == DataType::OBJECT_ID)
     {
         // all entries must be equal
@@ -393,7 +400,7 @@ Schema::equals(const Schema &s) const
                 res = false;
             }
         }
-        
+
         for(auto loc  = object_map().begin();
             loc != object_map().end() && res;
             loc++)
@@ -408,13 +415,13 @@ Schema::equals(const Schema &s) const
                 res = false;
             }
         }
-        
+
     }
-    else if(dt_id == DataType::LIST_ID) 
+    else if(dt_id == DataType::LIST_ID)
     {
         // all entries must be equal
         index_t s_n_chd = s.number_of_children();
-        
+
         // can't be compatible in this case
         if(number_of_children() != s_n_chd)
             return false;
@@ -443,7 +450,7 @@ Schema::equals(const Schema &s) const
 //-----------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------//
-void    
+void
 Schema::compact_to(Schema &s_dest) const
 {
     s_dest.reset();
@@ -486,7 +493,7 @@ Schema::to_string_stream(std::ostream &os,
         // unsupported
         CONDUIT_ERROR("<Schema::to_string_stream> "
                       "Unknown Schema::to_string protocol:" << protocol
-                       <<"\nSupported protocols:\n" 
+                       <<"\nSupported protocols:\n"
                        <<" json, yaml");
     }
 }
@@ -564,7 +571,7 @@ Schema::to_json_stream(std::ostream &os,
         os << eoe;
         utils::indent(os,indent,depth,pad);
         os << "[" << eoe;
-        
+
         size_t nchildren = children().size();
         for(size_t i=0; i < nchildren;i++)
         {
@@ -586,7 +593,7 @@ Schema::to_json_stream(std::ostream &os,
 //---------------------------------------------------------------------------//
 void
 Schema::to_json_stream(const std::string &stream_path,
-                       index_t indent, 
+                       index_t indent,
                        index_t depth,
                        const std::string &pad,
                        const std::string &eoe) const
@@ -676,7 +683,7 @@ Schema::to_yaml_stream(std::ostream &os,
 //---------------------------------------------------------------------------//
 void
 Schema::to_yaml_stream(const std::string &stream_path,
-                       index_t indent, 
+                       index_t indent,
                        index_t depth,
                        const std::string &pad,
                        const std::string &eoe) const
@@ -755,8 +762,8 @@ Schema::load(const std::string &ifname)
 //-----------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------//
-index_t 
-Schema::number_of_children() const 
+index_t
+Schema::number_of_children() const
 {
     if(m_dtype.id() != DataType::LIST_ID  &&
        m_dtype.id() != DataType::OBJECT_ID)
@@ -797,7 +804,7 @@ Schema::child_ptr(index_t idx) const
 
 
 //---------------------------------------------------------------------------//
-void    
+void
 Schema::remove(index_t idx)
 {
     index_t dtype_id = m_dtype.id();
@@ -809,11 +816,11 @@ Schema::remove(index_t idx)
                       "and therefore "
                       "does not have children.");
     }
-    
+
     Schema::schema_vector_type  &chldrn = children();
     if( (size_t)idx >= chldrn.size())
     {
-        CONDUIT_ERROR("<Schema::remove> Invalid index:" 
+        CONDUIT_ERROR("<Schema::remove> Invalid index:"
                     << idx << ">=" << chldrn.size() <<  "(number_of_children)");
     }
 
@@ -825,7 +832,7 @@ Schema::remove(index_t idx)
             auto loc = object_map().find(object_order()[i]);
             object_map().value(loc)--;
         }
-        
+
         object_map().erase(object_order()[(size_t)idx]);
         object_order().erase(object_order().begin() + (size_t)idx);
     }
@@ -889,7 +896,7 @@ Schema::child(const std::string &name)
                       " does not have named children.");
     }
     return *children()[child_index(name)];
-}    
+}
 
 //---------------------------------------------------------------------------//
 const Schema&
@@ -924,7 +931,7 @@ Schema::fetch_existing(const std::string &path)
     utils::split_path(path,p_curr,p_next);
 
     size_t idx = (size_t) child_index(p_curr);
-    
+
     // check for parent
     if(p_curr == "..")
     {
@@ -937,7 +944,7 @@ Schema::fetch_existing(const std::string &path)
             return m_parent->fetch_existing(p_next);
         }
     }
-    
+
     if(p_next.empty())
     {
         return *children()[idx];
@@ -975,7 +982,7 @@ Schema::fetch_existing(const std::string &path) const
     }
 
     size_t idx = (size_t) child_index(p_curr);
-    
+
     if(p_next.empty())
     {
         return *children()[idx];
@@ -996,7 +1003,7 @@ Schema::child_index(const std::string &name) const
     // find p_curr with an iterator
     auto loc = object_map().find(name);
 
-    // error if child does not exist. 
+    // error if child does not exist.
     if(loc == object_map().end())
     {
         CONDUIT_ERROR("<Schema::child_index> Error: "
@@ -1030,7 +1037,7 @@ Schema::child_name(index_t idx) const
 }
 
 //---------------------------------------------------------------------------//
-void 
+void
 Schema::rename_child(const std::string &current_name,
                      const std::string &new_name)
 {
@@ -1074,7 +1081,7 @@ Schema::rename_child(const std::string &current_name,
     object_order()[(size_t)idx] = new_name;
 
     // we don't need to modify children(), we are not changing the
-    // child schema 
+    // child schema
 }
 
 
@@ -1084,20 +1091,20 @@ Schema::fetch(const std::string &path)
 {
     // fetch w/ path forces OBJECT_ID
     init_object();
-        
+
     std::string p_curr;
     std::string p_next;
     utils::split_path(path,p_curr,p_next);
 
-    // handle parent 
+    // handle parent
     // check for parent
     if(p_curr == "..")
     {
         if(m_parent != NULL) // TODO: check for error (no parent)
            return m_parent->fetch(p_next);
     }
-    
-    if (!has_path(p_curr)) 
+
+    if (!has_path(p_curr))
     {
         Schema* my_schema = allocate<Schema>(m_allocator);
         my_schema->m_parent = this;
@@ -1156,7 +1163,7 @@ Schema::operator[](const std::string &path)
 }
 
 //---------------------------------------------------------------------------//
-std::string 
+std::string
 Schema::name() const
 {
     std::string name = "";
@@ -1181,7 +1188,7 @@ Schema::name() const
         {
             // use name
             std::string cld_name = p->child_name(idx);
-            
+
             // check if name() includes "/", if so we need to escape
             bool escape = false;
             if(cld_name.find('/') != std::string::npos)
@@ -1214,7 +1221,7 @@ Schema::name() const
 }
 
 //---------------------------------------------------------------------------//
-std::string 
+std::string
 Schema::path() const
 {
     std::string path = "";
@@ -1260,7 +1267,7 @@ Schema::has_child(const std::string &name) const
 
 
 //---------------------------------------------------------------------------//
-bool           
+bool
 Schema::has_path(const std::string &path) const
 {
     // for the non-object case, has_path simply returns false
@@ -1320,7 +1327,7 @@ Schema::child_names() const
 }
 
 //---------------------------------------------------------------------------//
-void    
+void
 Schema::remove(const std::string &path)
 {
     if(m_dtype.id() != DataType::OBJECT_ID)
@@ -1344,7 +1351,7 @@ Schema::remove(const std::string &path)
     else
     {
         remove_child(p_curr);
-    }    
+    }
 }
 
 //---------------------------------------------------------------------------//
@@ -1428,9 +1435,11 @@ Schema::deallocate(pointer<T> data) {
 void
 Schema::init_defaults()
 {
+    std::cerr << __FILE__ << " " << __LINE__ << std::endl;
     m_dtype  = DataType::empty();
     m_hierarchy_data = NULL;
     m_parent = NULL;
+    std::cerr << __FILE__ << " " << __LINE__ << std::endl;
 }
 
 //---------------------------------------------------------------------------//
@@ -1471,13 +1480,13 @@ Schema::release()
           deallocate<Schema>(chld[i]);
         }
     }
-    
+
     if(dtype().id() == DataType::OBJECT_ID)
-    { 
+    {
         delete object_hierarchy();
     }
     else if(dtype().id() == DataType::LIST_ID)
-    { 
+    {
         delete list_hierarchy();
     }
 
@@ -1489,18 +1498,18 @@ Schema::release()
 
 //-----------------------------------------------------------------------------
 //
-/// -- Private transform helpers -- 
+/// -- Private transform helpers --
 //
 //-----------------------------------------------------------------------------
 
 
 
 //---------------------------------------------------------------------------//
-void    
+void
 Schema::compact_to(Schema &s_dest, index_t curr_offset) const
 {
     index_t dtype_id = m_dtype.id();
-    
+
     if(dtype_id == DataType::OBJECT_ID )
     {
         s_dest.init_object();
@@ -1518,7 +1527,7 @@ Schema::compact_to(Schema &s_dest, index_t curr_offset) const
         s_dest.init_list();
         size_t nchildren = children().size();
         for(size_t i=0; i < nchildren ;i++)
-        {            
+        {
             pointer<Schema> cld_src = children()[i];
             Schema &cld_dest = s_dest.append();
             cld_src->compact_to(cld_dest,curr_offset);
@@ -1537,7 +1546,7 @@ Schema::compact_to(Schema &s_dest, index_t curr_offset) const
 
 
 //---------------------------------------------------------------------------//
-void 
+void
 Schema::walk_schema(const std::string &json_schema)
 {
     Generator g(json_schema);
@@ -1582,7 +1591,7 @@ Schema::list_hierarchy()
 
 //---------------------------------------------------------------------------//
 const Schema::Schema_Object_Hierarchy *
-Schema::object_hierarchy() const 
+Schema::object_hierarchy() const
 {
     if(m_dtype.id() != DataType::OBJECT_ID)
     {
@@ -1596,8 +1605,8 @@ Schema::object_hierarchy() const
 
 //---------------------------------------------------------------------------//
 const Schema::Schema_List_Hierarchy *
-Schema::list_hierarchy() const 
-{    
+Schema::list_hierarchy() const
+{
     if(m_dtype.id() != DataType::LIST_ID)
     {
         CONDUIT_ERROR("<Schema::list_hierarchy()> Error: Cannot "
@@ -1614,7 +1623,7 @@ Schema::schema_vector_type &
 Schema::children()
 {
     index_t dtype_id = m_dtype.id();
-    if( ! ( dtype_id == DataType::OBJECT_ID || 
+    if( ! ( dtype_id == DataType::OBJECT_ID ||
             dtype_id ==  DataType::LIST_ID ))
     {
         CONDUIT_ERROR("<Schema::children()> Error: Cannot "
@@ -1624,11 +1633,11 @@ Schema::children()
                       "and therefore "
                       "does not have children.");
     }
-    
+
     if ( dtype_id == DataType::OBJECT_ID)
     {
         return object_hierarchy()->children;
-    } 
+    }
     else
     {
         return list_hierarchy()->children;
@@ -1658,8 +1667,8 @@ Schema::children() const
     if (m_dtype.id() == DataType::OBJECT_ID)
     {
         return object_hierarchy()->children;
-    } 
-    else 
+    }
+    else
     {
         return list_hierarchy()->children;
     }
