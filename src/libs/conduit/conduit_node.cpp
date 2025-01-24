@@ -17272,9 +17272,13 @@ T*
 Node::allocate(Args&&... args) {
   using AT = typename std::allocator_traits<
       allocator_type>::template rebind_alloc<T>;
+  std::cerr << __FILE__ << " " << __LINE__ << std::endl;
   AT alloc(m_allocator);
+  std::cerr << __FILE__ << " " << __LINE__ << std::endl;
   auto data = alloc.allocate(1);
+  std::cerr << __FILE__ << " " << __LINE__ << std::endl;
   alloc.construct(data, std::forward<Args>(args)...);
+  std::cerr << __FILE__ << " " << __LINE__ << std::endl;
   return metall::to_raw_pointer(data);
 }
 
