@@ -104,7 +104,9 @@ Node::Node(const allocator_type& alloc)
 : m_children(alloc),
   m_allocator(alloc)
 {
+    std::cerr << __FILE__ << " " << __LINE__ << std::endl;
     init_defaults();
+    std::cerr << __FILE__ << " " << __LINE__ << std::endl;
 }
 
 //---------------------------------------------------------------------------//
@@ -17431,7 +17433,9 @@ Node::init_defaults()
 
     m_mmaped    = false;
     m_mmap      = NULL;
+    std::cerr << __FILE__ << " " << __LINE__ << std::endl;
     m_schema = allocate<Schema>(DataType::EMPTY_ID, m_allocator);
+    std::cerr << __FILE__ << " " << __LINE__ << std::endl;
     m_owns_schema = true;
 
     m_parent = NULL;
