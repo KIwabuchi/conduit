@@ -104,7 +104,8 @@ Node::Node(const allocator_type& alloc)
 : m_children(alloc),
   m_allocator(alloc)
 {
-    std::cerr << __FILE__ << " " << __LINE__ << std::endl;
+    metall::logger::set_log_level(metall::logger::level_filter::verbose);
+    std::cerr << __FILE__ << " " << __LINE__ << "stateful_allocator_available " << m_allocator.stateful_allocator_available() << std::endl;
     init_defaults();
     std::cerr << __FILE__ << " " << __LINE__ << std::endl;
 }
